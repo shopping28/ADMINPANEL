@@ -7,17 +7,28 @@
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .card { background: #1a1a2e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; border-left: 5px solid #3498db; }
-        button { padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px; }
+        button { padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
         .app { background: #00f260; } .rej { background: #e74c3c; color: white; }
         .det-btn { background: #3498db; color: white; width: 100%; margin-bottom: 10px; }
-        .details { display: none; background: #000; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; }
+        .details { display: none; background: #000; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; border-radius: 5px; }
+
+        /* Toast CSS */
+        #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260;
+            display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards;
+        }
+        .toast.error { border-left-color: #e74c3c; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
+    <div id="toast-box"></div>
     <a href="admin_dashboard.html" style="color:#aaa;">← Back</a>
     <h2>Withdraw Requests</h2>
     
-    <!-- Settings -->
     <div style="background:#222; padding:15px; margin-bottom:20px; border-radius:10px;">
         <input type="number" id="minAmt" placeholder="Min Taka" style="padding:5px;">
         <input type="number" id="minRef" placeholder="Min Ref" style="padding:5px;">
@@ -33,10 +44,24 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // TOAST FUNCTION
+        function showToast(msg, type = 'success') {
+            const box = document.getElementById('toast-box');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = type === 'success' ? `✅ ${msg}` : `❌ ${msg}`;
+            box.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 3000);
+        }
+
         db.ref('settings/withdraw_rules').on('value', s => {
             if(s.val()) { document.getElementById('minAmt').value = s.val().minAmount; document.getElementById('minRef').value = s.val().minReferrals; }
         });
-        function saveRules() { db.ref('settings/withdraw_rules').set({ minAmount: Number(document.getElementById('minAmt').value), minReferrals: Number(document.getElementById('minRef').value) }); alert("Saved!"); }
+        
+        function saveRules() { 
+            db.ref('settings/withdraw_rules').set({ minAmount: Number(document.getElementById('minAmt').value), minReferrals: Number(document.getElementById('minRef').value) }); 
+            showToast("Rules Saved!", "success"); 
+        }
 
         db.ref('withdraw_requests').orderByChild('status').equalTo('pending').on('value', snap => {
             const list = document.getElementById('list'); list.innerHTML = "";
@@ -62,9 +87,18 @@
         }
 
         function proc(key, st, amt, uid) {
-            if(!confirm(st + "?")) return;
-            if(st === 'rejected') db.ref('users/'+uid+'/balance').transaction(c => (c||0)+amt);
-            db.ref('withdraw_requests/'+key).update({status: st});
+            if(st === 'rejected') {
+                if(confirm("Reject and refund balance?")) {
+                    db.ref('users/'+uid+'/balance').transaction(c => (c||0)+amt);
+                    db.ref('withdraw_requests/'+key).update({status: st});
+                    showToast("Rejected & Refunded", "error");
+                }
+            } else {
+                if(confirm("Confirm Approve?")) {
+                    db.ref('withdraw_requests/'+key).update({status: st});
+                    showToast("Withdraw Approved!", "success");
+                }
+            }
         }
     </script>
 </body>
