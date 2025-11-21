@@ -9,12 +9,24 @@
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #1a1a2e; padding: 40px; border-radius: 20px; width: 100%; max-width: 350px; text-align: center; border: 1px solid #333; box-shadow: 0 0 30px rgba(0,242,96,0.1); }
         h2 { color: #00f260; letter-spacing: 2px; margin-bottom: 30px; }
-        input { width: 100%; padding: 15px; background: #0f0c29; border: 1px solid #333; color: white; margin-bottom: 15px; border-radius: 10px; box-sizing: border-box; outline: none; }
-        input:focus { border-color: #00f260; }
-        button { width: 100%; padding: 15px; background: #00f260; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; color: #0f0c29; margin-top: 10px; }
+        input { width: 100%; padding: 15px; background: #0f0c29; border: 1px solid #333; color: white; margin-bottom: 15px; border-radius: 10px; box-sizing: border-box; outline: none; transition: 0.3s; }
+        input:focus { border-color: #00f260; box-shadow: 0 0 10px rgba(0,242,96,0.2); }
+        button { width: 100%; padding: 15px; background: #00f260; border: none; border-radius: 10px; font-weight: bold; font-size: 1.1rem; cursor: pointer; color: #0f0c29; margin-top: 10px; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
+
+        /* Toast CSS */
+        #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260;
+            display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards;
+        }
+        .toast.error { border-left-color: #e74c3c; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
+    <div id="toast-box"></div>
     <div class="card">
         <h2>MASTER PANEL</h2>
         <form onsubmit="event.preventDefault(); checkLogin();">
@@ -25,16 +37,26 @@
     </div>
 
     <script>
+        // TOAST NOTIFICATION FUNCTION
+        function showToast(msg, type = 'success') {
+            const box = document.getElementById('toast-box');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = type === 'success' ? `✅ ${msg}` : `❌ ${msg}`;
+            box.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 3000);
+        }
+
         function checkLogin() {
             const u = document.getElementById('adminUser').value;
             const p = document.getElementById('adminPass').value;
 
-            // --- LOGIN CREDENTIALS ---
             if(u === "admin" && p === "123456") {
+                showToast("Login Successful! Redirecting...", "success");
                 localStorage.setItem('admin_logged', 'true');
-                window.location.href = 'admin_dashboard.html';
+                setTimeout(() => window.location.href = 'admin_dashboard.html', 1500);
             } else {
-                alert("❌ Wrong Credentials!");
+                showToast("Invalid Credentials!", "error");
             }
         }
     </script>
