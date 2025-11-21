@@ -11,26 +11,64 @@
         .header { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid #333; padding-bottom: 15px; }
         .logout { background: #e74c3c; color: white; border: none; padding: 8px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
-        .card { background: linear-gradient(145deg, #1e1e2f, #161625); padding: 25px; border-radius: 20px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .card { background: linear-gradient(145deg, #1e1e2f, #161625); padding: 25px; border-radius: 20px; text-align: center; cursor: pointer; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; position: relative; }
         .card:hover { transform: translateY(-5px); border-color: #00f260; }
         .card i { font-size: 2.5rem; margin-bottom: 15px; }
+        
+        /* Notification Badge */
+        .badge {
+            position: absolute; top: 10px; right: 10px;
+            background: #e74c3c; color: white;
+            width: 25px; height: 25px; border-radius: 50%;
+            font-size: 0.8rem; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; border: 2px solid #1e1e2f;
+            opacity: 0; transition: opacity 0.3s;
+        }
     </style>
 </head>
 <body>
     <div class="header"><h2>🔥 Master Control</h2><button class="logout" onclick="logout()">Logout</button></div>
 
     <div class="grid">
-        <div class="card" onclick="window.location.href='admin_activation.html'"><i class="fas fa-bolt" style="color:#f1c40f;"></i><h4>Activations</h4></div>
-        <div class="card" onclick="window.location.href='admin_withdraw.html'"><i class="fas fa-wallet" style="color:#00f260;"></i><h4>Withdrawals</h4></div>
+        <div class="card" onclick="window.location.href='admin_activation.html'">
+            <div id="badge-act" class="badge">0</div>
+            <i class="fas fa-bolt" style="color:#f1c40f;"></i><h4>Activations</h4>
+        </div>
+        <div class="card" onclick="window.location.href='admin_withdraw.html'">
+            <div id="badge-wit" class="badge">0</div>
+            <i class="fas fa-wallet" style="color:#00f260;"></i><h4>Withdrawals</h4>
+        </div>
         <div class="card" onclick="window.location.href='admin_tasks.html'"><i class="fas fa-tasks" style="color:#3498db;"></i><h4>Manage Tasks</h4></div>
         <div class="card" onclick="window.location.href='admin_users.html'"><i class="fas fa-users" style="color:#9b59b6;"></i><h4>User List</h4></div>
         <div class="card" onclick="window.location.href='admin_vip.html'"><i class="fas fa-crown" style="color:#e67e22;"></i><h4>VIP Levels</h4></div>
         <div class="card" onclick="window.location.href='admin_settings.html'"><i class="fas fa-cogs" style="color:#ecf0f1;"></i><h4>Settings</h4></div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
         if(localStorage.getItem('admin_logged') !== 'true') window.location.href = 'admin_login.html';
+        
         function logout() { localStorage.removeItem('admin_logged'); window.location.href = 'admin_login.html'; }
+
+        // Initialize Firebase for Badge Counts
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Count Pending Activations
+        db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', s => {
+            const count = s.numChildren();
+            const b = document.getElementById('badge-act');
+            if(count > 0) { b.innerText = count; b.style.opacity = 1; } else { b.style.opacity = 0; }
+        });
+
+        // Count Pending Withdrawals
+        db.ref('withdraw_requests').orderByChild('status').equalTo('pending').on('value', s => {
+            const count = s.numChildren();
+            const b = document.getElementById('badge-wit');
+            if(count > 0) { b.innerText = count; b.style.opacity = 1; } else { b.style.opacity = 0; }
+        });
     </script>
 </body>
 </html>
