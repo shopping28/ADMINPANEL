@@ -6,7 +6,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; background:#1a1a2e; border:1px solid #444; color:white; border-radius: 8px; box-sizing: border-box; }
+        /* Search Input Style */
+        input { width: 100%; padding: 12px; margin-bottom: 20px; background:#1a1a2e; border:1px solid #444; color:white; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
+        input:focus { border-color: #00f260; outline: none; }
+
         .user { 
             background: #1a1a2e; 
             padding: 20px; 
@@ -59,7 +62,10 @@
 <body>
     <a href="admin_dashboard.html" style="color:#aaa;">← Back</a>
     <h2>User Panel</h2>
-    <input id="search" placeholder="Search by Phone Number..." onkeyup="filter()">
+    
+    <!-- UPDATED SEARCH BOX -->
+    <input id="search" placeholder="Search by Name or Phone Number..." onkeyup="filter()">
+    
     <div id="list">Loading...</div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -70,6 +76,7 @@
         const db = firebase.database();
         let allUsers = [];
 
+        // Load Users
         db.ref('users').on('value', snapshot => {
             allUsers = [];
             snapshot.forEach(childSnapshot => {
@@ -79,11 +86,12 @@
             render(allUsers);
         });
 
+        // Render List
         function render(usersArray) {
             const listContainer = document.getElementById('list');
             listContainer.innerHTML = "";
             if (usersArray.length === 0) {
-                listContainer.innerHTML = "<p>No users found.</p>";
+                listContainer.innerHTML = "<p style='text-align:center; color:#aaa;'>No users found.</p>";
                 return;
             }
             usersArray.forEach(user => {
@@ -91,11 +99,12 @@
                 const status = user.status || 'pending';
                 const ownCode = user.ownCode || 'N/A';
                 const referredBy = user.referredBy || 'None';
+                const firstName = user.firstName || 'No Name';
 
                 listContainer.innerHTML += `
                     <div class="user">
                         <div class="user-info">
-                            <p><strong>Name:</strong> ${user.firstName}</p>
+                            <p><strong>Name:</strong> ${firstName}</p>
                             <p><strong>Phone:</strong> ${user.phone}</p>
                             <p><strong>Password:</strong> ${user.password}</p>
                             <p><strong>Balance:</strong> ৳${balance}</p>
@@ -124,9 +133,21 @@
             }
         }
 
+        // --- UPDATED FILTER FUNCTION ---
         function filter() {
-            const searchTerm = document.getElementById('search').value.toLowerCase();
-            const filteredUsers = allUsers.filter(user => user.phone.toLowerCase().includes(searchTerm));
+            const searchTerm = document.getElementById('search').value.toLowerCase().trim();
+            
+            const filteredUsers = allUsers.filter(user => {
+                // Check if phone matches
+                const phoneMatch = user.phone && user.phone.toLowerCase().includes(searchTerm);
+                
+                // Check if name matches
+                const nameMatch = user.firstName && user.firstName.toLowerCase().includes(searchTerm);
+                
+                // Return true if EITHER phone OR name matches
+                return phoneMatch || nameMatch;
+            });
+            
             render(filteredUsers);
         }
     </script>
