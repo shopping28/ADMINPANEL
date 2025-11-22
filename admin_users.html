@@ -2,153 +2,137 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>User Panel</title>
+    <title>Admin - User List</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        /* Search Input Style */
-        input { width: 100%; padding: 12px; margin-bottom: 20px; background:#1a1a2e; border:1px solid #444; color:white; border-radius: 8px; box-sizing: border-box; font-size: 1rem; }
-        input:focus { border-color: #00f260; outline: none; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { color: #aaa; text-decoration: none; font-size: 1.1rem; }
+        
+        /* Search Box */
+        .search-box {
+            width: 100%; padding: 12px; margin-bottom: 20px; 
+            background:#1a1a2e; border:1px solid #444; color:white; 
+            border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+        }
+        .search-box:focus { border-color: #00f260; outline: none; }
 
-        .user { 
-            background: #1a1a2e; 
-            padding: 20px; 
-            border-radius: 10px; 
-            margin-bottom: 15px; 
-            border-left: 5px solid #3498db; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start;
-            flex-wrap: wrap;
+        /* User Card Style */
+        .user-card { 
+            background: #1a1a2e; padding: 20px; border-radius: 10px; margin-bottom: 15px; 
+            border-left: 5px solid #3498db; display: flex; 
+            justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
+            transition: 0.3s;
         }
-        .user-info p {
-            margin: 6px 0;
-            font-size: 0.95rem;
-            color: #ccc;
-        }
-        .user-info p strong {
-            color: #00f260;
-            min-width: 130px;
-            display: inline-block;
-        }
-        .user-info p .uid {
-            color: #777;
-            font-size: 0.8rem;
-        }
-        .user-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-width: 100px;
-        }
-        .btn { 
-            padding: 8px 15px; 
-            cursor: pointer; 
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
-        }
-        .ban-btn { background: #e74c3c; color: white; }
-        .active-btn { background: #2ecc71; color: white; }
+        .user-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
-        /* Status-specific styles */
-        .status-active { color: #2ecc71; text-transform: capitalize; font-weight: bold; }
-        .status-pending { color: #f1c40f; text-transform: capitalize; font-weight: bold; }
-        .status-banned { color: #e74c3c; text-transform: capitalize; font-weight: bold; }
+        .info-group p { margin: 5px 0; font-size: 0.95rem; color: #ccc; }
+        .info-group strong { color: #00f260; display: inline-block; width: 100px; }
+        .pass-text { color: #f1c40f; font-weight: bold; background: rgba(241, 196, 15, 0.1); padding: 2px 6px; border-radius: 4px; }
 
+        /* Buttons */
+        .actions { display: flex; flex-direction: column; gap: 10px; min-width: 120px; }
+        .btn { padding: 8px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; }
+        .btn-active { background: #2ecc71; }
+        .btn-ban { background: #e74c3c; }
+        
+        /* Status Colors */
+        .st-active { color: #2ecc71; font-weight: bold; }
+        .st-banned { color: #e74c3c; font-weight: bold; }
+        .st-pending { color: #f1c40f; font-weight: bold; }
     </style>
 </head>
 <body>
-    <a href="admin_dashboard.html" style="color:#aaa;">← Back</a>
-    <h2>User Panel</h2>
-    
-    <!-- UPDATED SEARCH BOX -->
-    <input id="search" placeholder="Search by Name or Phone Number..." onkeyup="filter()">
-    
-    <div id="list">Loading...</div>
 
+    <div class="header">
+        <a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a>
+        <h2>User Management</h2>
+    </div>
+    
+    <!-- Search Input -->
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search by Name or Phone Number..." onkeyup="filterUsers()">
+    
+    <div id="userListContainer">
+        <p style="text-align:center; color:#aaa;">Loading users...</p>
+    </div>
+
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
         const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
         let allUsers = [];
 
-        // Load Users
+        // 1. Load Users Realtime (Live Update)
         db.ref('users').on('value', snapshot => {
             allUsers = [];
-            snapshot.forEach(childSnapshot => {
-                allUsers.push({ key: childSnapshot.key, ...childSnapshot.val() });
-            });
-            allUsers.reverse(); // Show newest users first
-            render(allUsers);
+            if(snapshot.exists()){
+                snapshot.forEach(childSnapshot => {
+                    allUsers.push({ key: childSnapshot.key, ...childSnapshot.val() });
+                });
+                allUsers.reverse(); // Show new users first
+                renderUsers(allUsers);
+            } else {
+                document.getElementById('userListContainer').innerHTML = "<p style='text-align:center;'>No users found.</p>";
+            }
         });
 
-        // Render List
-        function render(usersArray) {
-            const listContainer = document.getElementById('list');
-            listContainer.innerHTML = "";
-            if (usersArray.length === 0) {
-                listContainer.innerHTML = "<p style='text-align:center; color:#aaa;'>No users found.</p>";
+        // 2. Render Function
+        function renderUsers(users) {
+            const container = document.getElementById('userListContainer');
+            container.innerHTML = "";
+
+            if (users.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:#aaa;'>No matching users found.</p>";
                 return;
             }
-            usersArray.forEach(user => {
-                const balance = user.balance || 0;
-                const status = user.status || 'pending';
-                const ownCode = user.ownCode || 'N/A';
-                const referredBy = user.referredBy || 'None';
-                const firstName = user.firstName || 'No Name';
 
-                listContainer.innerHTML += `
-                    <div class="user">
-                        <div class="user-info">
-                            <p><strong>Name:</strong> ${firstName}</p>
+            users.forEach(user => {
+                const status = user.status || 'pending';
+                const statusClass = status === 'active' ? 'st-active' : (status === 'banned' ? 'st-banned' : 'st-pending');
+                
+                // Password Field (Auto Updates)
+                const password = user.password || "Not Saved"; 
+
+                container.innerHTML += `
+                    <div class="user-card">
+                        <div class="info-group">
+                            <p><strong>Name:</strong> ${user.firstName} ${user.lastName || ''}</p>
                             <p><strong>Phone:</strong> ${user.phone}</p>
-                            <p><strong>Password:</strong> ${user.password}</p>
-                            <p><strong>Balance:</strong> ৳${balance}</p>
-                            <p><strong>Status:</strong> <span class="status-${status}">${status}</span></p>
-                            <p><strong>My Code:</strong> ${ownCode}</p>
-                            <p><strong>Referred By:</strong> ${referredBy}</p>
-                            <p><span class="uid">User ID: ${user.key}</span></p>
+                            <p><strong>Password:</strong> <span class="pass-text">${password}</span></p>
+                            <p><strong>Balance:</strong> ৳${user.balance || 0}</p>
+                            <p><strong>Status:</strong> <span class="${statusClass}">${status.toUpperCase()}</span></p>
+                            <p><strong>Ref Code:</strong> ${user.ownCode || 'N/A'}</p>
+                            <p style="font-size:0.8rem; color:#555;">ID: ${user.key}</p>
                         </div>
-                        <div class="user-actions">
-                            <button class="btn active-btn" onclick="activateUser('${user.key}')">Activate</button>
-                            <button class="btn ban-btn" onclick="banUser('${user.key}')">Ban</button>
+                        <div class="actions">
+                            <button class="btn btn-active" onclick="setStatus('${user.key}', 'active')">Activate</button>
+                            <button class="btn btn-ban" onclick="setStatus('${user.key}', 'banned')">Ban User</button>
                         </div>
                     </div>`;
             });
         }
 
-        function banUser(key) {
-            if (confirm("Are you sure you want to ban this user?")) {
-                db.ref('users/' + key).update({ status: 'banned' });
+        // 3. Change Status Function
+        function setStatus(uid, status) {
+            if(confirm(`Are you sure you want to make this user ${status}?`)) {
+                db.ref('users/' + uid).update({ status: status });
             }
         }
 
-        function activateUser(key) {
-            if (confirm("Are you sure you want to activate this user?")) {
-                db.ref('users/' + key).update({ status: 'active' });
-            }
-        }
-
-        // --- UPDATED FILTER FUNCTION ---
-        function filter() {
-            const searchTerm = document.getElementById('search').value.toLowerCase().trim();
-            
-            const filteredUsers = allUsers.filter(user => {
-                // Check if phone matches
-                const phoneMatch = user.phone && user.phone.toLowerCase().includes(searchTerm);
-                
-                // Check if name matches
-                const nameMatch = user.firstName && user.firstName.toLowerCase().includes(searchTerm);
-                
-                // Return true if EITHER phone OR name matches
-                return phoneMatch || nameMatch;
-            });
-            
-            render(filteredUsers);
+        // 4. Search Filter
+        function filterUsers() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allUsers.filter(u => 
+                (u.phone && u.phone.includes(term)) || 
+                (u.firstName && u.firstName.toLowerCase().includes(term))
+            );
+            renderUsers(filtered);
         }
     </script>
 </body>
