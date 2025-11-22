@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel - Update Balance</title>
+    <title>Admin Panel - User Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Poppins', sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; }
@@ -16,12 +16,12 @@
         }
         .back-btn:hover { background: #555; }
 
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         h2 { text-align: center; margin-bottom: 5px; }
 
         /* Stats Cards */
         .stats-grid {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px;
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;
         }
         .stat-card {
             padding: 15px; border-radius: 8px; text-align: center; color: white;
@@ -30,29 +30,31 @@
         .bg-total { background: linear-gradient(135deg, #667eea, #764ba2); }
         .bg-active { background: linear-gradient(135deg, #11998e, #38ef7d); }
         .bg-inactive { background: linear-gradient(135deg, #ff5f6d, #ffc371); }
+        .bg-money { background: linear-gradient(135deg, #f1c40f, #d35400); } /* New for Balance */
         
-        .stat-card h3 { margin: 0; font-size: 0.9rem; opacity: 0.9; }
-        .stat-card span { font-size: 1.8rem; font-weight: bold; }
+        .stat-card h3 { margin: 0; font-size: 0.8rem; opacity: 0.9; }
+        .stat-card span { font-size: 1.5rem; font-weight: bold; }
 
         /* Table Styles */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; vertical-align: middle; }
         th { background-color: #007bff; color: white; }
         tr:hover { background-color: #f1f1f1; }
         
-        input[type="number"] { padding: 8px; width: 80px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="number"] { padding: 8px; width: 70px; border: 1px solid #ccc; border-radius: 4px; }
         
         /* Action Buttons */
         .btn { padding: 8px 12px; border: none; color: white; border-radius: 4px; cursor: pointer; margin-left: 2px; font-size: 0.8rem; }
         .btn-up { background-color: #28a745; }
         .btn-down { background-color: #dc3545; }
-        .btn-up:hover { background-color: #218838; }
-        .btn-down:hover { background-color: #c82333; }
-
-        .status-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: white; }
+        
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; color: white; font-weight: bold; }
         .s-active { background: #28a745; }
-        .s-pending { background: #ffc107; color: black; }
+        .s-pending { background: #ffc107; color: #333; }
         .s-banned { background: #dc3545; }
+
+        .team-info { font-size: 0.9rem; }
+        .team-badge { background: #eef2f3; padding: 2px 6px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; color: #333; }
 
         #msg-status { text-align: center; margin-top: 10px; font-weight: bold; height: 20px; }
     </style>
@@ -62,10 +64,10 @@
 <div class="container">
     <div class="top-bar">
         <a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a>
-        <h3 style="margin:0;">Balance Manager</h3>
+        <h3 style="margin:0;">User & Balance Manager</h3>
     </div>
 
-    <!-- New Stats Section -->
+    <!-- Stats Section -->
     <div class="stats-grid">
         <div class="stat-card bg-total">
             <h3>Total Users</h3>
@@ -76,22 +78,27 @@
             <span id="count-active">0</span>
         </div>
         <div class="stat-card bg-inactive">
-            <h3>Inactive/Pending</h3>
+            <h3>Inactive</h3>
             <span id="count-inactive">0</span>
+        </div>
+        <div class="stat-card bg-money">
+            <h3>Total User Balance</h3>
+            <span id="count-balance">৳0</span>
         </div>
     </div>
     
     <table>
         <thead>
             <tr>
-                <th>User Info</th>
-                <th>Status</th>
-                <th>Balance</th>
-                <th>Action</th>
+                <th width="25%">User Info</th>
+                <th width="15%">Team Stats</th>
+                <th width="10%">Status</th>
+                <th width="15%">Balance</th>
+                <th width="35%">Action</th>
             </tr>
         </thead>
         <tbody id="userList">
-            <tr><td colspan="4" style="text-align:center;">Loading database...</td></tr>
+            <tr><td colspan="5" style="text-align:center;">Calculating data...</td></tr>
         </tbody>
     </table>
     <div id="msg-status"></div>
@@ -114,7 +121,6 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
-
   const usersRef = ref(db, 'users');
   
   onValue(usersRef, (snapshot) => {
@@ -123,63 +129,93 @@
 
     const data = snapshot.val();
     
-    // Counters
-    let total = 0;
-    let active = 0;
-    let inactive = 0;
+    // Stats Counters
+    let totalUsers = 0;
+    let activeUsers = 0;
+    let inactiveUsers = 0;
+    let totalSystemBalance = 0;
+
+    // --- TEAM CALCULATION LOGIC START ---
+    // 1. Map Referrals: ParentCode -> List of Children Codes
+    let parentToChildren = {};
+    let usersArray = [];
 
     if (data) {
-      Object.keys(data).forEach(key => {
-        const user = data[key];
-        
-        // Data Extraction
-        const currentBal = user.balance ? parseFloat(user.balance) : 0;
-        const userName = user.firstName ? user.firstName : (user.name || 'Unknown'); 
-        const userPhone = user.phone || key;
-        const status = user.status || 'pending';
+        Object.keys(data).forEach(key => {
+            const u = data[key];
+            u.uid = key; // Attach ID to object
+            usersArray.push(u);
+            
+            // Build referral map
+            if (u.referredBy) {
+                if (!parentToChildren[u.referredBy]) parentToChildren[u.referredBy] = [];
+                parentToChildren[u.referredBy].push(u.ownCode);
+            }
+        });
 
-        // Counting Logic
-        total++;
-        if(status === 'active') {
-            active++;
-        } else {
-            inactive++;
-        }
+        // Helper: Calculate Total Team (Recursive)
+        const getTeamSize = (code) => {
+            if (!code || !parentToChildren[code]) return 0;
+            let count = parentToChildren[code].length; // Direct referrals
+            
+            // Go deeper for indirect referrals
+            parentToChildren[code].forEach(childCode => {
+                count += getTeamSize(childCode);
+            });
+            return count;
+        };
 
-        // Status Badge Logic
-        let badgeClass = 's-pending';
-        if(status === 'active') badgeClass = 's-active';
-        if(status === 'banned') badgeClass = 's-banned';
+        // Process Data for Display
+        usersArray.forEach(user => {
+            // Counters
+            totalUsers++;
+            if (user.status === 'active') activeUsers++; else inactiveUsers++;
+            totalSystemBalance += (user.balance ? parseFloat(user.balance) : 0);
 
-        // Table Row
-        const row = `
-          <tr>
-            <td>
-                <b>${userName}</b><br>
-                <small style="color:gray">${userPhone}</small>
-            </td>
-            <td><span class="status-badge ${badgeClass}">${status.toUpperCase()}</span></td>
-            <td style="font-weight:bold; color:#333;">৳${currentBal}</td>
-            <td style="display:flex; align-items:center;">
-                <input type="number" id="amount-${key}" placeholder="0">
-                <button class="btn btn-up" onclick="window.updateBalance('${key}', ${currentBal}, 'add')">+</button>
-                <button class="btn btn-down" onclick="window.updateBalance('${key}', ${currentBal}, 'sub')">-</button>
-            </td>
-          </tr>
-        `;
-        userList.innerHTML += row;
-      });
+            // Team Calculation
+            const directRef = parentToChildren[user.ownCode] ? parentToChildren[user.ownCode].length : 0;
+            const totalTeam = getTeamSize(user.ownCode);
 
-      // Update Stats on Screen
-      document.getElementById('count-total').innerText = total;
-      document.getElementById('count-active').innerText = active;
-      document.getElementById('count-inactive').innerText = inactive;
+            // UI Variables
+            const currentBal = user.balance ? parseFloat(user.balance) : 0;
+            const userName = user.firstName ? user.firstName : (user.name || 'User'); 
+            const userPhone = user.phone || 'N/A';
+            const status = user.status || 'pending';
+            const statusClass = status === 'active' ? 's-active' : (status === 'banned' ? 's-banned' : 's-pending');
+
+            const row = `
+              <tr>
+                <td>
+                    <b>${userName}</b><br>
+                    <small style="color:gray">${userPhone}</small><br>
+                    <small style="color:#007bff; font-size:0.7rem;">Code: ${user.ownCode || 'N/A'}</small>
+                </td>
+                <td>
+                    <div class="team-info">
+                        Direct: <span class="team-badge">${directRef}</span><br>
+                        <span style="display:inline-block; margin-top:3px;">Total Team: <span class="team-badge" style="background:#d1e7dd; color:#0f5132;">${totalTeam}</span></span>
+                    </div>
+                </td>
+                <td><span class="status-badge ${statusClass}">${status.toUpperCase()}</span></td>
+                <td style="font-weight:bold; color:#333;">৳${currentBal}</td>
+                <td style="display:flex; align-items:center;">
+                    <input type="number" id="amount-${user.uid}" placeholder="0">
+                    <button class="btn btn-up" onclick="window.updateBalance('${user.uid}', ${currentBal}, 'add')">+</button>
+                    <button class="btn btn-down" onclick="window.updateBalance('${user.uid}', ${currentBal}, 'sub')">-</button>
+                </td>
+              </tr>
+            `;
+            userList.innerHTML += row;
+        });
+
+        // Update Stats Cards
+        document.getElementById('count-total').innerText = totalUsers;
+        document.getElementById('count-active').innerText = activeUsers;
+        document.getElementById('count-inactive').innerText = inactiveUsers;
+        document.getElementById('count-balance').innerText = "৳" + totalSystemBalance.toLocaleString();
 
     } else {
-      userList.innerHTML = '<tr><td colspan="4" style="text-align:center;">No users found</td></tr>';
-      document.getElementById('count-total').innerText = 0;
-      document.getElementById('count-active').innerText = 0;
-      document.getElementById('count-inactive').innerText = 0;
+        userList.innerHTML = '<tr><td colspan="5" style="text-align:center;">No users found in database</td></tr>';
     }
   });
 
@@ -202,7 +238,7 @@
     })
     .then(() => {
       const msg = document.getElementById('msg-status');
-      msg.innerText = "Balance Updated!";
+      msg.innerText = "Updated Successfully!";
       msg.style.color = "green";
       amountInput.value = "";
       setTimeout(() => { msg.innerText = ""; }, 2000);
