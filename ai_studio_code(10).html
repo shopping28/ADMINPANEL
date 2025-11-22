@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Update Balance</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #007bff; color: white; }
+        
+        input[type="number"] { padding: 8px; width: 100px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        .btn { padding: 8px 15px; border: none; color: white; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        .btn-up { background-color: #28a745; } /* Green */
+        .btn-down { background-color: #dc3545; } /* Red */
+        
+        .btn-up:hover { background-color: #218838; }
+        .btn-down:hover { background-color: #c82333; }
+
+        #status { text-align: center; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Admin: Balance Manager</h2>
+    <p style="text-align:center; color: gray;">Database: users/</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>User Name / ID</th>
+                <th>Current Balance</th>
+                <th>Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="userList">
+            <tr><td colspan="4" style="text-align:center;">Loading users...</td></tr>
+        </tbody>
+    </table>
+    <div id="status"></div>
+</div>
+
+<!-- Firebase Script -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // আপনার দেওয়া কনফিগারেশন
+  const firebaseConfig = {
+    apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g",
+    authDomain: "art-paid-work001.firebaseapp.com",
+    databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com",
+    projectId: "art-paid-work001",
+    storageBucket: "art-paid-work001.firebasestorage.app",
+    messagingSenderId: "524647364992",
+    appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965"
+  };
+
+  // Firebase শুরু করা
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ডাটাবেস থেকে ইউজার লিস্ট আনা
+  const usersRef = ref(db, 'users'); // আপনার ডাটাবেস এর মেইন ফোল্ডার যদি 'users' হয়
+  
+  onValue(usersRef, (snapshot) => {
+    const userList = document.getElementById('userList');
+    userList.innerHTML = ''; // আগের লিস্ট পরিষ্কার করা
+
+    const data = snapshot.val();
+    
+    if (data) {
+      Object.keys(data).forEach(key => {
+        const user = data[key];
+        const currentBal = user.balance ? parseFloat(user.balance) : 0;
+        const userName = user.name ? user.name : key; // নাম না থাকলে ID দেখাবে
+
+        const row = `
+          <tr>
+            <td>${userName} <br> <small style="color:gray">${key}</small></td>
+            <td style="font-weight:bold;">${currentBal}</td>
+            <td>
+                <input type="number" id="amount-${key}" placeholder="0">
+            </td>
+            <td>
+                <button class="btn btn-up" onclick="window.updateBalance('${key}', ${currentBal}, 'add')">Up (+)</button>
+                <button class="btn btn-down" onclick="window.updateBalance('${key}', ${currentBal}, 'sub')">Down (-)</button>
+            </td>
+          </tr>
+        `;
+        userList.innerHTML += row;
+      });
+    } else {
+      userList.innerHTML = '<tr><td colspan="4" style="text-align:center;">No users found in database</td></tr>';
+    }
+  });
+
+  // ব্যালেন্স আপডেট ফাংশন (Window তে সেট করা হয়েছে যাতে HTML থেকে কল করা যায়)
+  window.updateBalance = function(userId, currentBalance, type) {
+    const amountInput = document.getElementById(`amount-${userId}`);
+    const amount = parseFloat(amountInput.value);
+
+    if (!amount || amount <= 0) {
+      alert("Please enter a valid amount!");
+      return;
+    }
+
+    let newBalance = currentBalance;
+
+    if (type === 'add') {
+      newBalance += amount; // যোগ হবে
+    } else if (type === 'sub') {
+      newBalance -= amount; // বিয়োগ হবে
+    }
+
+    // ডাটাবেসে আপডেট পাঠানো
+    update(ref(db, 'users/' + userId), {
+      balance: newBalance
+    })
+    .then(() => {
+      document.getElementById('status').innerText = "Balance Updated Successfully!";
+      document.getElementById('status').style.color = "green";
+      amountInput.value = ""; // ইনপুট খালি করা
+      
+      // ৩ সেকেন্ড পর মেসেজ সরানো
+      setTimeout(() => { document.getElementById('status').innerText = ""; }, 3000);
+    })
+    .catch((error) => {
+      alert("Error updating: " + error.message);
+    });
+  }
+</script>
+
+</body>
+</html>
