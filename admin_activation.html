@@ -9,15 +9,13 @@
         .req { background: #1a1a2e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #444; border-left: 5px solid #f39c12; }
         button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: 0.2s; }
         button:active { transform: scale(0.95); }
-        .app { background: #00f260; } .rej { background: #e74c3c; color: white; }
+        .app { background: #00f260; } 
+        .app:disabled { background: #555; cursor: not-allowed; color: #ccc; }
+        .rej { background: #e74c3c; color: white; }
         
         /* Toast CSS */
         #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast {
-            background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260;
-            display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards;
-        }
+        .toast { background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260; display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards; }
         .toast.error { border-left-color: #e74c3c; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
@@ -35,7 +33,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // TOAST FUNCTION
         function showToast(msg, type = 'success') {
             const box = document.getElementById('toast-box');
             const t = document.createElement('div');
@@ -50,33 +47,69 @@
             if(!snapshot.exists()) { list.innerHTML = "No pending requests."; return; }
             snapshot.forEach((child) => {
                 const d = child.val();
-                list.innerHTML += `<div class="req"><p>User Phone: <b>${d.senderPhone}</b> | TrxID: <b style="color:#f1c40f">${d.trxId}</b></p><button class="app" onclick="approve('${child.key}', '${d.uid}')">APPROVE</button><button class="rej" onclick="reject('${child.key}')">REJECT</button></div>`;
+                // Button ID added specifically to disable it later
+                list.innerHTML += `<div class="req"><p>User Phone: <b>${d.senderPhone}</b> | TrxID: <b style="color:#f1c40f">${d.trxId}</b></p><button id="btn-${child.key}" class="app" onclick="approve('${child.key}', '${d.uid}')">APPROVE</button><button class="rej" onclick="reject('${child.key}')">REJECT</button></div>`;
             });
         });
 
         async function approve(key, uid) {
-            // Removed 'confirm' to make it faster, or keep it if you prefer safety
-            const rates = (await db.ref('settings/referral').once('value')).val() || {level1:0,level2:0,level3:0};
-            const user = (await db.ref('users/'+uid).once('value')).val();
+            // 1. Disable Button Immediately
+            const btn = document.getElementById('btn-' + key);
+            if(btn) { btn.disabled = true; btn.innerText = "Processing..."; }
+
+            // 2. Check if user is ALREADY active (Prevents double bonus)
+            const userSnap = await db.ref('users/'+uid).once('value');
+            const user = userSnap.val();
+
+            if (!user) {
+                showToast("User not found!", "error");
+                return;
+            }
+
+            if (user.status === 'active') {
+                // If already active, just close the request. DO NOT give bonus.
+                await db.ref('activation_requests/'+key).update({status:'approved'});
+                showToast("User was already active. Request cleared.", "error");
+                return;
+            }
+
+            // 3. Load Commission Rates from 'settings/commissions'
+            const ratesSnap = await db.ref('settings/commissions').once('value');
+            const rates = ratesSnap.val() || {level1:0, level2:0, level3:0};
             
-            if(user && user.referredBy && user.referredBy !== "the_art2000") {
+            // 4. Distribute Bonus
+            if(user.referredBy && user.referredBy !== "the_art2000") {
                 await distribute(user.referredBy, 1, rates);
             }
             
-            db.ref('users/'+uid).update({status:'active'});
-            db.ref('activation_requests/'+key).update({status:'approved'});
-            showToast("User Activated Successfully!", "success");
+            // 5. Activate User
+            await db.ref('users/'+uid).update({status:'active'});
+            await db.ref('activation_requests/'+key).update({status:'approved'});
+            showToast("User Activated & Bonus Distributed!", "success");
         }
 
         async function distribute(code, lvl, rates) {
             if(lvl > 3) return;
             const snap = await db.ref('users').orderByChild('ownCode').equalTo(code).once('value');
+            
             if(snap.exists()) {
                 const pid = Object.keys(snap.val())[0];
                 const pdata = Object.values(snap.val())[0];
-                let amt = lvl===1?rates.level1 : lvl===2?rates.level2 : rates.level3;
-                if(amt > 0) db.ref('users/'+pid).update({balance: (pdata.balance||0)+amt});
-                if(pdata.referredBy && pdata.referredBy !== "the_art2000") await distribute(pdata.referredBy, lvl+1, rates);
+                
+                let amt = 0;
+                if(lvl === 1) amt = rates.level1;
+                else if(lvl === 2) amt = rates.level2;
+                else if(lvl === 3) amt = rates.level3;
+                
+                if(amt > 0) {
+                    await db.ref('users/'+pid).update({
+                        balance: (pdata.balance || 0) + amt
+                    });
+                }
+                
+                if(pdata.referredBy && pdata.referredBy !== "the_art2000") {
+                    await distribute(pdata.referredBy, lvl+1, rates);
+                }
             }
         }
 
