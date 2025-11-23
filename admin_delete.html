@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage & Restore Users</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 600px; background: #1a1a2e; padding: 30px; border-radius: 15px; border: 1px solid #444; box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center; }
+        
+        h2 { margin-top: 0; color: #f1c40f; }
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid #333; }
+        .tab { flex: 1; padding: 10px; cursor: pointer; background: #111; color: #aaa; border: 1px solid #333; }
+        .tab.active { background: #3498db; color: white; border-color: #3498db; }
+
+        input { 
+            width: 100%; padding: 12px; margin: 15px 0; 
+            background: #0f0c29; border: 1px solid #444; 
+            color: white; border-radius: 8px; box-sizing: border-box; text-align: center;
+        }
+        
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .search-btn { background: #3498db; color: white; }
+        
+        /* Action Buttons */
+        .soft-del-btn { background: #f39c12; color: black; }
+        .hard-del-btn { background: #e74c3c; color: white; margin-top: 10px; }
+        .restore-btn { background: #00f260; color: black; }
+
+        #resultBox { display: none; margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; text-align: left; }
+        .info-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 5px 0; }
+        
+        .section { display: none; }
+        .section.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('deleteSec', this)">DELETE USER</div>
+            <div class="tab" onclick="switchTab('restoreSec', this)">RESTORE USER</div>
+        </div>
+
+        <!-- DELETE SECTION -->
+        <div id="deleteSec" class="section active">
+            <h3 style="color:#e74c3c;">Find Active User</h3>
+            <input type="number" id="searchDel" placeholder="Enter Active Phone Number">
+            <button class="search-btn" onclick="findUser('users', 'resultDel')">Search Active User</button>
+
+            <div id="resultDel" style="display:none; margin-top:15px;">
+                <div class="user-data">Loading...</div>
+                <button class="soft-del-btn" onclick="moveToTrash()"><i class="fas fa-archive"></i> Move to Trash (Recoverable)</button>
+                <button class="hard-del-btn" onclick="permanentDelete()"><i class="fas fa-skull"></i> Permanent Delete</button>
+            </div>
+        </div>
+
+        <!-- RESTORE SECTION -->
+        <div id="restoreSec" class="section">
+            <h3 style="color:#00f260;">Restore from Trash</h3>
+            <input type="number" id="searchRes" placeholder="Enter Deleted Phone Number">
+            <button class="search-btn" onclick="findUser('trash_users', 'resultRes')">Search in Trash</button>
+
+            <div id="resultRes" style="display:none; margin-top:15px;">
+                <div class="user-data">Loading...</div>
+                <button class="restore-btn" onclick="restoreUserNow()"><i class="fas fa-trash-restore"></i> RESTORE USER</button>
+            </div>
+        </div>
+
+        <br>
+        <a href="admin_dashboard.html" style="color:#aaa; text-decoration:none;">← Back Dashboard</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentUid = null;
+        let currentUserData = null;
+
+        function switchTab(id, el) {
+            document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            el.classList.add('active');
+            // Hide previous results
+            document.getElementById('resultDel').style.display = 'none';
+            document.getElementById('resultRes').style.display = 'none';
+        }
+
+        function findUser(path, resultId) {
+            const inputId = path === 'users' ? 'searchDel' : 'searchRes';
+            const phone = document.getElementById(inputId).value;
+            
+            if(!phone) return alert("Enter Number!");
+
+            db.ref(path).orderByChild('phone').equalTo(phone).once('value', snap => {
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        currentUid = child.key;
+                        currentUserData = child.val();
+                        
+                        const html = `
+                            <div style="background:#222; padding:10px; border-radius:5px; margin-bottom:10px; text-align:left;">
+                                <p>Name: <b style="color:#f1c40f">${currentUserData.firstName}</b></p>
+                                <p>Balance: ৳${currentUserData.balance}</p>
+                                <p>Status: ${currentUserData.status}</p>
+                            </div>
+                        `;
+                        
+                        const resBox = document.getElementById(resultId);
+                        resBox.querySelector('.user-data').innerHTML = html;
+                        resBox.style.display = 'block';
+                    });
+                } else {
+                    alert("User not found in " + (path==='users'?'Active List':'Trash List'));
+                    document.getElementById(resultId).style.display = 'none';
+                }
+            });
+        }
+
+        // 1. MOVE TO TRASH (Soft Delete)
+        function moveToTrash() {
+            if(!currentUid) return;
+            if(confirm("Move this user to Trash? (They cannot login, but you can restore later)")) {
+                // Copy to Trash
+                db.ref('trash_users/' + currentUid).set(currentUserData)
+                .then(() => {
+                    // Remove from Active
+                    return db.ref('users/' + currentUid).remove();
+                })
+                .then(() => {
+                    alert("User Moved to Trash!");
+                    location.reload();
+                })
+                .catch(err => alert(err.message));
+            }
+        }
+
+        // 2. RESTORE USER
+        function restoreUserNow() {
+            if(!currentUid) return;
+            if(confirm("Restore this user? (They will be able to login again)")) {
+                // Copy back to Users
+                db.ref('users/' + currentUid).set(currentUserData)
+                .then(() => {
+                    // Remove from Trash
+                    return db.ref('trash_users/' + currentUid).remove();
+                })
+                .then(() => {
+                    alert("User Restored Successfully!");
+                    location.reload();
+                })
+                .catch(err => alert(err.message));
+            }
+        }
+
+        // 3. PERMANENT DELETE
+        function permanentDelete() {
+            if(!currentUid) return;
+            if(confirm("⚠️ WARNING: This will delete user FOREVER. You CANNOT restore it.\n\nContinue?")) {
+                db.ref('users/' + currentUid).remove()
+                .then(() => {
+                    alert("User Permanently Deleted.");
+                    location.reload();
+                });
+            }
+        }
+
+    </script>
+</body>
+</html>
