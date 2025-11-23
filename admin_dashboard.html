@@ -3,264 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* DARK PREMIUM THEME */
-        body { background: #0f0c29; font-family: 'Poppins', sans-serif; margin: 0; padding-bottom: 80px; color: white; }
-        
-        .header {
-            padding: 20px; background: linear-gradient(to right, #24243e, #0f0c29);
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        body { 
+            background: #0f0c29; 
+            background: linear-gradient(to right, #24243e, #302b63, #0f0c29);
+            color: white; 
+            font-family: 'Poppins', sans-serif; 
+            padding: 20px; 
+            margin: 0;
         }
-        
-        .badge { padding: 5px 12px; border-radius: 15px; font-size: 0.7rem; font-weight: bold; margin-top: 5px; display: inline-block; }
-        .inact { background: #e74c3c; color: white; box-shadow: 0 0 10px #e74c3c; }
-        .act { background: #00f260; color: black; box-shadow: 0 0 10px #00f260; }
 
-        /* Activation Banner */
-        .activate-box {
-            margin: 20px; padding: 15px; background: linear-gradient(45deg, #ff416c, #ff4b2b);
-            border-radius: 15px; display: flex; justify-content: space-between; align-items: center;
-            animation: pulse 2s infinite; cursor: pointer; box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 30px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
+            padding-bottom: 20px; 
         }
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.02);} 100% {transform: scale(1);} }
-
-        /* Grid Layout */
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; }
         
-        .card {
-            background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; text-align: center;
-            border: 1px solid rgba(255,255,255,0.1); position: relative; overflow: hidden; transition: 0.3s;
-        }
-        .card:active { transform: scale(0.95); }
-        .card i.icon { font-size: 2rem; margin-bottom: 10px; }
-        
-        /* Lock Overlay */
-        .lock-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 12, 41, 0.9); /* Dark overlay */
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(3px); z-index: 10;
-        }
-        .lock-layer i { font-size: 1.5rem; color: #e74c3c; margin-bottom: 5px; }
-        .lock-layer span { font-size: 0.7rem; color: #aaa; font-weight: bold; }
-        
-        /* Timed Lock (Blue) */
-        .time-lock i { color: #3498db; }
+        h2 { margin: 0; letter-spacing: 1px; }
 
-        /* Colors */
-        .c-task { color: #ff9a9e; } .c-team { color: #a18cd1; } .c-with { color: #84fab0; } .c-vip { color: #fccb90; }
+        .logout-btn { 
+            background: linear-gradient(45deg, #ff416c, #ff4b2b); 
+            color: white; border: none; padding: 10px 25px; 
+            border-radius: 30px; cursor: pointer; font-weight: bold; 
+            box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+            transition: 0.3s;
+        }
+        .logout-btn:hover { transform: scale(1.05); }
 
-        /* Profile Icon */
-        .profile-btn {
-            width: 45px; height: 45px; background: #1a1a2e; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; border: 2px solid #333; cursor: pointer;
-            overflow: hidden;
+        /* GRID LAYOUT */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+            gap: 20px; 
         }
-        .profile-btn img {
-            width: 100%; height: 100%; object-fit: cover;
+
+        .card { 
+            background: rgba(255,255,255,0.05); 
+            padding: 25px; 
+            border-radius: 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            transition: 0.3s; 
+            position: relative; 
+            backdrop-filter: blur(5px);
         }
+        .card:hover { 
+            transform: translateY(-5px); 
+            border-color: #00f260; 
+            background: rgba(255,255,255,0.1);
+        }
+
+        .card i { font-size: 2.5rem; margin-bottom: 15px; display: block; }
+        .card h4 { margin: 0; font-weight: 600; font-size: 0.9rem; color: #ddd; }
+        
+        /* NOTIFICATION BADGE */
+        .badge {
+            position: absolute; top: 10px; right: 10px;
+            background: #e74c3c; color: white;
+            width: 25px; height: 25px; border-radius: 50%;
+            font-size: 0.8rem; display: flex; justify-content: center; align-items: center;
+            font-weight: bold; border: 2px solid #1e1e2f;
+            opacity: 0; transition: opacity 0.3s;
+            box-shadow: 0 0 10px #e74c3c;
+        }
+
+        /* Colors for Icons */
+        .c-act { color: #f1c40f; }
+        .c-wit { color: #00f260; }
+        .c-task { color: #3498db; }
+        .c-user { color: #9b59b6; }
+        .c-vip { color: #e67e22; }
+        .c-man { color: #ff4757; }
+        .c-set { color: #ecf0f1; }
+
     </style>
 </head>
 <body>
 
-    <!-- HEADER -->
+    <!-- Header -->
     <div class="header">
         <div>
-            <h2 style="margin:0;">Hi, <span id="userName">Loading...</span></h2>
-            <span id="userStatus" class="badge inact">Checking...</span>
+            <h2>🔥 Master Control</h2>
+            <small style="color:#aaa;">Admin Panel v2.0</small>
         </div>
-        
-        <!-- Profile Button -->
-        <div class="profile-btn" id="profileBtn" onclick="checkAccess('account.html')">
-            <i class="fas fa-user"></i>
-        </div>
+        <button class="logout-btn" onclick="logout()">Logout <i class="fas fa-sign-out-alt"></i></button>
     </div>
 
-    <!-- ACTIVATION BANNER -->
-    <div id="activateBanner" class="activate-box" onclick="window.location.href='account_active.html'">
-        <div>
-            <b style="font-size:1.1rem;">Activate Account</b><br>
-            <small style="color:#eee;">Unlock All Features Now</small>
-        </div>
-        <i class="fas fa-chevron-right"></i>
-    </div>
-
-    <!-- MAIN GRID -->
+    <!-- Main Menu Grid -->
     <div class="grid">
         
-        <!-- 1. DAILY TASK -->
-        <div class="card" onclick="checkAccess('task.html')">
-            <i class="fas fa-tasks icon c-task"></i>
-            <div>Daily Task</div>
-            <div class="lock-layer" id="lock_task">
-                <i class="fas fa-lock"></i><span>Activate First</span>
-            </div>
-        </div>
-
-        <!-- 2. MY TEAM -->
-        <div class="card" onclick="checkAccess('my_team.html')">
-            <i class="fas fa-users icon c-team"></i>
-            <div>My Team</div>
-            <div class="lock-layer" id="lock_team">
-                <i class="fas fa-lock"></i><span>Activate First</span>
-            </div>
-        </div>
-
-        <!-- 3. WITHDRAW -->
-        <div class="card" onclick="checkAccess('withdraw.html')">
-            <i class="fas fa-wallet icon c-with"></i>
-            <div>Withdraw</div>
-            <div class="lock-layer" id="lock_withdraw">
-                <i class="fas fa-lock"></i><span>Activate First</span>
-            </div>
-        </div>
-
-        <!-- 4. VIP LEVEL -->
-        <div class="card" onclick="checkAccess('vip_level.html')">
-            <i class="fas fa-crown icon c-vip"></i>
-            <div>VIP Level</div>
-            <div class="lock-layer" id="lock_vip">
-                <i class="fas fa-lock"></i><span>Activate First</span>
-            </div>
-        </div>
-
-        <!-- 5. QUIZ GAME -->
-        <div class="card" onclick="window.location.href='question_game.html'">
-            <i class="fas fa-gamepad icon" style="color:#e0c3fc;"></i>
-            <div>Quiz Game</div>
-            <div class="lock-layer time-lock"><i class="fas fa-clock"></i><span>21 Days</span></div>
-        </div>
-
-        <!-- 6. WEEKLY -->
-        <div class="card" onclick="window.location.href='weekly.html'">
-            <i class="fas fa-calendar-week icon" style="color:#fff;"></i>
-            <div>Weekly</div>
-            <div class="lock-layer time-lock"><i class="fas fa-clock"></i><span>16 Days</span></div>
+        <!-- Activations -->
+        <div class="card" onclick="window.location.href='admin_activation.html'">
+            <div id="badge-act" class="badge">0</div>
+            <i class="fas fa-bolt c-act"></i>
+            <h4>Activations</h4>
         </div>
         
-        <!-- 7. MONTHLY -->
-        <div class="card" onclick="window.location.href='monthly.html'">
-            <i class="fas fa-calendar-alt icon" style="color:#fff;"></i>
-            <div>Monthly</div>
-            <div class="lock-layer time-lock"><i class="fas fa-clock"></i><span>16 Days</span></div>
+        <!-- Withdrawals -->
+        <div class="card" onclick="window.location.href='admin_withdraw.html'">
+            <div id="badge-wit" class="badge">0</div>
+            <i class="fas fa-wallet c-wit"></i>
+            <h4>Withdrawals</h4>
         </div>
         
-        <!-- 8. VIP CLUB -->
-         <div class="card" onclick="window.location.href='vip_club.html'">
-            <i class="fas fa-gem icon" style="color:#f1c40f;"></i>
-            <div>VIP Club</div>
-            <div class="lock-layer time-lock"><i class="fas fa-clock"></i><span>21 Days</span></div>
+        <!-- Manage Tasks -->
+        <div class="card" onclick="window.location.href='admin_tasks.html'">
+            <i class="fas fa-tasks c-task"></i>
+            <h4>Manage Tasks</h4>
+        </div>
+        
+        <!-- User List -->
+        <div class="card" onclick="window.location.href='admin_users.html'">
+            <i class="fas fa-users c-user"></i>
+            <h4>User List</h4>
+        </div>
+        
+        <!-- VIP Levels -->
+        <div class="card" onclick="window.location.href='admin_vip.html'">
+            <i class="fas fa-crown c-vip"></i>
+            <h4>VIP Levels</h4>
+        </div>
+
+        <!-- Admin Manager (New) -->
+        <div class="card" onclick="window.location.href='admin_manager.html'">
+            <i class="fas fa-user-shield c-man"></i>
+            <h4>User Manager</h4>
+        </div>
+
+        <!-- Settings -->
+        <div class="card" onclick="window.location.href='admin_settings.html'">
+            <i class="fas fa-cogs c-set"></i>
+            <h4>System Settings</h4>
         </div>
 
     </div>
 
-    <!-- FIREBASE SDK -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        const firebaseConfig = {
-          apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g",
-          authDomain: "art-paid-work001.firebaseapp.com",
-          databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com",
-          projectId: "art-paid-work001",
-          storageBucket: "art-paid-work001.firebasestorage.app",
-          messagingSenderId: "524647364992",
-          appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965"
-        };
+        // 1. Security Check (Login ছাড়া ঢুকতে পারবে না)
+        if(localStorage.getItem('admin_logged') !== 'true') {
+            window.location.href = 'admin_login.html';
+        }
+        
+        // 2. Logout Function
+        function logout() { 
+            if(confirm("Logout from Admin Panel?")) {
+                localStorage.removeItem('admin_logged'); 
+                window.location.href = 'admin_login.html'; 
+            }
+        }
+
+        // 3. Firebase Init
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.database();
 
-        let currentUserStatus = 'inactive';
-
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                db.ref('users/' + user.uid).on('value', (snapshot) => {
-                    const data = snapshot.val();
-                    if(data) {
-                        // Set Name
-                        document.getElementById('userName').innerText = data.firstName;
-                        
-                        // Check Status
-                        currentUserStatus = data.status;
-                        updateUI(currentUserStatus);
-
-                        // --- AI VOICE LOGIC START ---
-                        if(currentUserStatus === 'active') {
-                            // Check local storage if played before
-                            const played = localStorage.getItem('voice_played_' + user.uid);
-                            if(!played) {
-                                playVoice();
-                                localStorage.setItem('voice_played_' + user.uid, 'true');
-                            }
-                        }
-                        // --- AI VOICE LOGIC END ---
-
-                        // Update Profile Pic
-                        if(data.profilePic) {
-                            document.getElementById('profileBtn').innerHTML = `<img src="${data.profilePic}" alt="Profile">`;
-                        } else {
-                            document.getElementById('profileBtn').innerHTML = `<i class="fas fa-user"></i>`;
-                        }
-                    }
-                });
-            } else {
-                window.location.href = 'login_register.html';
+        // 4. Live Badge Counters (রিয়েলটাইম নোটিফিকেশন)
+        
+        // Count Pending Activations
+        db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', s => {
+            const count = s.numChildren();
+            const b = document.getElementById('badge-act');
+            if(count > 0) { 
+                b.innerText = count; 
+                b.style.opacity = 1; 
+            } else { 
+                b.style.opacity = 0; 
             }
         });
 
-        // --- VOICE FUNCTION ---
-        function playVoice() {
-            // ব্রাউজারের স্পিচ ইঞ্জিন ব্যবহার
-            let msg = new SpeechSynthesisUtterance();
-            msg.text = "Congratulations! Your account is active. So start your online network marketing journey.";
-            msg.lang = 'en-US'; // ইংলিশ
-            msg.rate = 1;       // নরমাল স্পিড
-            msg.pitch = 1.1;    // সামান্য চিকন স্বর
-            msg.volume = 1;     // ফুল ভলিউম
-
-            // অটো-প্লে পলিসি বাইপাস করার চেষ্টা
-            window.speechSynthesis.speak(msg);
-            
-            // যদি অটো প্লে না হয়, ইউজারের যেকোনো ক্লিকে বাজবে
-            document.body.addEventListener('click', function() {
-                window.speechSynthesis.speak(msg);
-            }, { once: true });
-        }
-
-        function updateUI(status) {
-            const badge = document.getElementById('userStatus');
-            const banner = document.getElementById('activateBanner');
-            const locks = ['lock_task', 'lock_team', 'lock_withdraw', 'lock_vip'];
-
-            if (status === 'active') {
-                badge.innerText = "ACTIVE";
-                badge.className = "badge act";
-                banner.style.display = 'none';
-                locks.forEach(id => document.getElementById(id).style.display = 'none');
-            } else {
-                badge.innerText = "INACTIVE";
-                badge.className = "badge inact";
-                banner.style.display = 'flex';
-                locks.forEach(id => document.getElementById(id).style.display = 'flex');
+        // Count Pending Withdrawals
+        db.ref('withdraw_requests').orderByChild('status').equalTo('pending').on('value', s => {
+            const count = s.numChildren();
+            const b = document.getElementById('badge-wit');
+            if(count > 0) { 
+                b.innerText = count; 
+                b.style.opacity = 1; 
+            } else { 
+                b.style.opacity = 0; 
             }
-        }
-
-        function checkAccess(url) {
-            if (currentUserStatus === 'active') {
-                window.location.href = url;
-            } else {
-                if("vibrate" in navigator) navigator.vibrate(200);
-                alert("⛔ ACCOUNT LOCKED!\n\nApni Account Active koren nai.");
-            }
-        }
+        });
     </script>
 </body>
 </html>
