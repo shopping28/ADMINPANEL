@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Settings</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -10,23 +9,11 @@
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .header { display: flex; align-items: center; margin-bottom: 20px; }
         .back-btn { color: #aaa; text-decoration: none; font-size: 1.2rem; margin-right: 15px; }
-        
-        .card { background: #1a1a2e; padding: 25px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; display: flex; align-items: center; gap: 10px; }
-        
+        .card { background: #1a1a2e; padding: 25px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #333; }
         .input-group { margin-bottom: 15px; }
         label { display: block; color: #ccc; font-size: 0.9rem; margin-bottom: 5px; }
-        input { 
-            width: 100%; padding: 12px; background: #0f0c29; border: 1px solid #444; 
-            color: white; border-radius: 8px; box-sizing: border-box; font-size: 1rem;
-        }
-        input:focus { border-color: #00f260; outline: none; }
-
-        button { 
-            width: 100%; padding: 15px; background: linear-gradient(45deg, #00f260, #05c46b); 
-            border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #0f0c29; font-size: 1rem; transition: 0.3s;
-        }
-        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 242, 96, 0.3); }
+        input { width: 100%; padding: 12px; background: #0f0c29; border: 1px solid #444; color: white; border-radius: 8px; }
+        button { width: 100%; padding: 15px; background: #00f260; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #0f0c29; }
     </style>
 </head>
 <body>
@@ -35,72 +22,32 @@
         <h2>System Settings</h2>
     </div>
 
-    <!-- Payment Settings -->
     <div class="card">
         <h3 style="color:#f1c40f;"><i class="fas fa-wallet"></i> Payment Info</h3>
-        <div class="input-group">
-            <label>Account Activation Fee (Tk)</label>
-            <input type="number" id="actFee" placeholder="e.g. 200">
-        </div>
-        <div class="input-group">
-            <label>Admin Personal Number (Bkash/Nagad)</label>
-            <input type="number" id="adminPhone" placeholder="01xxxxxxxxx">
-        </div>
+        <div class="input-group"><label>Account Activation Fee (Tk)</label><input type="number" id="actFee"></div>
+        <div class="input-group"><label>Admin Personal Number</label><input type="number" id="adminPhone"></div>
         <button onclick="savePay()">Update Payment Settings</button>
     </div>
 
-    <!-- Referral Commission Settings -->
     <div class="card">
         <h3 style="color:#3498db;"><i class="fas fa-users"></i> Referral Commissions</h3>
-        
-        <div class="input-group">
-            <label>Level 1 Commission (Direct Refer)</label>
-            <input type="number" id="lvl1" placeholder="e.g. 130">
-            <small style="color:#666;">Amount received when user refers someone directly.</small>
-        </div>
-
-        <div class="input-group">
-            <label>Level 2 Commission (Downline)</label>
-            <input type="number" id="lvl2" placeholder="e.g. 20">
-            <small style="color:#666;">Amount received from the person referred by Level 1.</small>
-        </div>
-
-        <div class="input-group">
-            <label>Level 3 Commission (Super Downline)</label>
-            <input type="number" id="lvl3" placeholder="e.g. 10">
-            <small style="color:#666;">Amount received from the person referred by Level 2.</small>
-        </div>
-
+        <div class="input-group"><label>Level 1 Commission</label><input type="number" id="lvl1"></div>
+        <div class="input-group"><label>Level 2 Commission</label><input type="number" id="lvl2"></div>
+        <div class="input-group"><label>Level 3 Commission</label><input type="number" id="lvl3"></div>
         <button onclick="saveRef()">Update Commissions</button>
     </div>
 
-    <!-- FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
-        const firebaseConfig = { 
-            apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", 
-            authDomain: "art-paid-work001.firebaseapp.com", 
-            databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", 
-            projectId: "art-paid-work001", 
-            storageBucket: "art-paid-work001.firebasestorage.app", 
-            messagingSenderId: "524647364992", 
-            appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" 
-        };
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Load Data on Page Load
         db.ref('settings').once('value', (snap) => {
             const d = snap.val() || {};
-            
-            // Load Payment Info
-            if(d.payment) { 
-                document.getElementById('actFee').value = d.payment.fee; 
-                document.getElementById('adminPhone').value = d.payment.number; 
-            }
-            
-            // Load Commission Info (Note: Changed path to 'commissions' to match user file)
+            if(d.payment) { document.getElementById('actFee').value = d.payment.fee; document.getElementById('adminPhone').value = d.payment.number; }
+            // Correct Path Used Here
             if(d.commissions) { 
                 document.getElementById('lvl1').value = d.commissions.level1; 
                 document.getElementById('lvl2').value = d.commissions.level2; 
@@ -108,29 +55,17 @@
             }
         });
 
-        // Save Payment Settings
         function savePay() {
-            const fee = Number(document.getElementById('actFee').value);
-            const phone = document.getElementById('adminPhone').value;
-
-            db.ref('settings/payment').set({ 
-                fee: fee, 
-                number: phone 
-            }).then(() => alert("Payment Info Updated Successfully!"));
+            db.ref('settings/payment').set({ fee: Number(document.getElementById('actFee').value), number: document.getElementById('adminPhone').value })
+            .then(() => alert("Payment Info Updated!"));
         }
 
-        // Save Referral Commission Settings
         function saveRef() {
-            const l1 = Number(document.getElementById('lvl1').value);
-            const l2 = Number(document.getElementById('lvl2').value);
-            const l3 = Number(document.getElementById('lvl3').value);
-
-            // Saving to 'settings/commissions' so User Page reads it correctly
             db.ref('settings/commissions').set({ 
-                level1: l1, 
-                level2: l2, 
-                level3: l3 
-            }).then(() => alert("Commission Rates Updated Successfully!"));
+                level1: Number(document.getElementById('lvl1').value), 
+                level2: Number(document.getElementById('lvl2').value), 
+                level3: Number(document.getElementById('lvl3').value) 
+            }).then(() => alert("Commission Rates Updated!"));
         }
     </script>
 </body>
