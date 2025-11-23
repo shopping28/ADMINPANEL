@@ -83,6 +83,7 @@
         .c-vip { color: #e67e22; }
         .c-man { color: #ff4757; }
         .c-set { color: #ecf0f1; }
+        .c-del { color: #ff6b6b; text-shadow: 0 0 10px rgba(255, 107, 107, 0.4); } /* New for Delete */
 
     </style>
 </head>
@@ -92,7 +93,7 @@
     <div class="header">
         <div>
             <h2>🔥 Master Control</h2>
-            <small style="color:#aaa;">Admin Panel v2.0</small>
+            <small style="color:#aaa;">Admin Panel v2.1</small>
         </div>
         <button class="logout-btn" onclick="logout()">Logout <i class="fas fa-sign-out-alt"></i></button>
     </div>
@@ -132,10 +133,16 @@
             <h4>VIP Levels</h4>
         </div>
 
-        <!-- Admin Manager (New) -->
+        <!-- Admin Manager -->
         <div class="card" onclick="window.location.href='admin_manager.html'">
             <i class="fas fa-user-shield c-man"></i>
             <h4>User Manager</h4>
+        </div>
+
+        <!-- NEW: RECYCLE BIN / DELETE USER -->
+        <div class="card" onclick="window.location.href='admin_delete.html'" style="border-color: rgba(255, 107, 107, 0.3);">
+            <i class="fas fa-trash-restore c-del"></i>
+            <h4 style="color:#ff6b6b;">Recycle Bin</h4>
         </div>
 
         <!-- Settings -->
@@ -151,7 +158,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
     <script>
-        // 1. Security Check (Login ছাড়া ঢুকতে পারবে না)
+        // 1. Security Check
         if(localStorage.getItem('admin_logged') !== 'true') {
             window.location.href = 'admin_login.html';
         }
@@ -169,7 +176,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // 4. Live Badge Counters (রিয়েলটাইম নোটিফিকেশন)
+        // 4. Live Badge Counters
         
         // Count Pending Activations
         db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', s => {
