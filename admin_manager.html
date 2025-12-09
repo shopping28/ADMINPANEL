@@ -15,27 +15,58 @@
         .bg-active { background: linear-gradient(135deg, #11998e, #38ef7d); }
         .bg-inactive { background: linear-gradient(135deg, #ff5f6d, #ffc371); }
         .bg-money { background: linear-gradient(135deg, #f1c40f, #d35400); }
+        
+        /* Table Styles */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; vertical-align: middle; }
         th { background-color: #007bff; color: white; }
+        
+        /* Input & Buttons */
         input[type="number"] { padding: 8px; width: 70px; border: 1px solid #ccc; border-radius: 4px; }
         .btn { padding: 8px 12px; border: none; color: white; border-radius: 4px; cursor: pointer; margin-left: 2px; }
         .btn-up { background-color: #28a745; }
         .btn-down { background-color: #dc3545; }
         .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 0.75rem; color: white; font-weight: bold; }
         .s-active { background: #28a745; } .s-pending { background: #ffc107; color: #333; }
+
+        /* Search Bar Style */
+        .search-container { margin-bottom: 20px; position: relative; }
+        .search-input { width: 100%; padding: 12px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
+        .search-input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 5px rgba(0,123,255,0.3); }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="top-bar"><a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a><h3>User & Balance Manager</h3></div>
+    <div class="top-bar">
+        <a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a>
+        <h3>User & Balance Manager</h3>
+    </div>
+    
     <div class="stats-grid">
         <div class="stat-card bg-total"><h3>Total Users</h3><span id="count-total">0</span></div>
         <div class="stat-card bg-active"><h3>Active Users</h3><span id="count-active">0</span></div>
         <div class="stat-card bg-inactive"><h3>Inactive</h3><span id="count-inactive">0</span></div>
         <div class="stat-card bg-money"><h3>User Balance</h3><span id="count-balance">৳0</span></div>
     </div>
-    <table><thead><tr><th>User Info</th><th>Status</th><th>Balance</th><th>Action</th></tr></thead><tbody id="userList"><tr><td colspan="4">Loading...</td></tr></tbody></table>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <input type="text" id="searchRef" class="search-input" placeholder="🔍 Search by Referral Code or Phone..." onkeyup="filterData()">
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>User Info</th>
+                <th>Status</th>
+                <th>Balance</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="userList">
+            <tr><td colspan="4" style="text-align:center;">Loading users...</td></tr>
+        </tbody>
+    </table>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -45,44 +76,98 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    let allUsersData = {}; 
+
+    // ডাটাবেস থেকে ডাটা লোড করা হচ্ছে
     db.ref('users').on('value', (snapshot) => {
+        allUsersData = snapshot.val() || {};
+        
+        // কনসোলে চেক করুন ডাটা ঠিকমতো আসছে কিনা
+        console.log("Loaded Users:", allUsersData);
+
+        calculateStats(); 
+        filterData(); 
+    });
+
+    // পরিসংখ্যান হিসাব করার ফাংশন
+    function calculateStats() {
+        let totalUsers = 0, activeUsers = 0, inactiveUsers = 0, totalBal = 0;
+        Object.keys(allUsersData).forEach(key => {
+            const u = allUsersData[key];
+            totalUsers++;
+            if (u.status === 'active') activeUsers++; else inactiveUsers++;
+            totalBal += u.balance ? parseFloat(u.balance) : 0;
+        });
+        document.getElementById('count-total').innerText = totalUsers;
+        document.getElementById('count-active').innerText = activeUsers;
+        document.getElementById('count-inactive').innerText = inactiveUsers;
+        document.getElementById('count-balance').innerText = "৳" + totalBal.toFixed(2);
+    }
+
+    // সার্চ ফিল্টার এবং টেবিল দেখানোর ফাংশন
+    window.filterData = function() {
+        const searchVal = document.getElementById('searchRef').value.toLowerCase().trim();
         const userList = document.getElementById('userList');
         userList.innerHTML = '';
-        let totalUsers = 0, activeUsers = 0, inactiveUsers = 0, totalBal = 0;
-        const data = snapshot.val();
-        
-        if (data) {
-            Object.keys(data).forEach(key => {
-                const u = data[key];
-                totalUsers++;
-                if (u.status === 'active') activeUsers++; else inactiveUsers++;
+
+        let found = false;
+
+        Object.keys(allUsersData).forEach(key => {
+            const u = allUsersData[key];
+            
+            // স্মার্ট চেক: রেফার কোড যেই নামেই থাকুক না কেন, এখানে ধরা পড়বে
+            // যদি ডাটাবেসে ref না থাকে তবে 'N/A' দেখাবে
+            const realRef = u.ref || u.referral || u.referralCode || u.inviteCode || u.refCode || "N/A";
+            
+            const userRefSearch = realRef.toString().toLowerCase();
+            const userPhone = (u.phone || "").toLowerCase();
+
+            // সার্চ লজিক: রেফার কোড অথবা ফোন নাম্বার দিয়ে সার্চ করা যাবে
+            if(searchVal === "" || userRefSearch.includes(searchVal) || userPhone.includes(searchVal)) {
+                found = true;
                 const bal = u.balance ? parseFloat(u.balance) : 0;
-                totalBal += bal;
                 const statusClass = u.status === 'active' ? 's-active' : 's-pending';
                 
                 userList.innerHTML += `<tr>
-                        <td><b>${u.firstName}</b><br><small>${u.phone}</small></td>
+                        <td>
+                            <div style="font-weight:600; font-size:15px;">${u.firstName}</div>
+                            <div style="font-size:13px; color:#555;">📞 ${u.phone}</div>
+                            <div style="font-size:13px; color:#007bff; font-weight:bold; margin-top:2px;">
+                                🔖 Ref: ${realRef}
+                            </div>
+                        </td>
                         <td><span class="status-badge ${statusClass}">${(u.status||'pending').toUpperCase()}</span></td>
                         <td>৳${bal}</td>
                         <td>
-                            <input type="number" id="amt-${key}" placeholder="0">
-                            <button class="btn btn-up" onclick="modBal('${key}', ${bal}, 'add')">+</button>
-                            <button class="btn btn-down" onclick="modBal('${key}', ${bal}, 'sub')">-</button>
+                            <div style="display:flex; align-items:center;">
+                                <input type="number" id="amt-${key}" placeholder="0">
+                                <button class="btn btn-up" onclick="modBal('${key}', ${bal}, 'add')">+</button>
+                                <button class="btn btn-down" onclick="modBal('${key}', ${bal}, 'sub')">-</button>
+                            </div>
                         </td>
                     </tr>`;
-            });
-            document.getElementById('count-total').innerText = totalUsers;
-            document.getElementById('count-active').innerText = activeUsers;
-            document.getElementById('count-inactive').innerText = inactiveUsers;
-            document.getElementById('count-balance').innerText = "৳" + totalBal.toFixed(2);
-        } else { userList.innerHTML = '<tr><td colspan="4">No users found.</td></tr>'; }
-    });
+            }
+        });
 
+        if (!found) {
+            userList.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #666;">No user found with this Info.</td></tr>';
+        }
+    }
+
+    // ব্যালেন্স আপডেট ফাংশন
     window.modBal = function(uid, current, type) {
         const amt = parseFloat(document.getElementById(`amt-${uid}`).value);
         if(!amt || amt <= 0) return alert("Enter valid amount");
         const newBal = type === 'add' ? current + amt : current - amt;
-        db.ref('users/' + uid).update({ balance: newBal }).then(() => { alert("Updated!"); document.getElementById(`amt-${uid}`).value = ""; });
+        
+        db.ref('users/' + uid).update({ balance: newBal })
+            .then(() => { 
+                alert("Balance Updated Successfully!"); 
+                document.getElementById(`amt-${uid}`).value = ""; 
+            })
+            .catch((error) => {
+                alert("Error: " + error.message);
+            });
     }
 </script>
 </body>
