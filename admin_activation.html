@@ -7,9 +7,13 @@
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .req { background: #1a1a2e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #444; border-left: 5px solid #f39c12; }
+        .info-row { margin-bottom: 10px; font-size: 0.95rem; }
+        .label { color: #aaa; font-size: 0.8rem; display: block; }
+        .val { color: #fff; font-weight: 600; font-family: monospace; letter-spacing: 0.5px; }
+        
         button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: 0.2s; }
         button:active { transform: scale(0.95); }
-        .app { background: #00f260; } 
+        .app { background: #00f260; color: #000; } 
         .app:disabled { background: #555; cursor: not-allowed; color: #ccc; }
         .rej { background: #e74c3c; color: white; }
         
@@ -22,7 +26,7 @@
 </head>
 <body>
     <div id="toast-box"></div>
-    <a href="admin_dashboard.html" style="color:#aaa;">← Back</a>
+    <a href="admin_dashboard.html" style="color:#aaa; text-decoration:none;">← Back to Dashboard</a>
     <h2>Pending Activations</h2>
     <div id="list">Loading...</div>
 
@@ -42,71 +46,113 @@
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 3000);
         }
 
+        // Real-time listener for Pending Requests
         db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', (snapshot) => {
             const list = document.getElementById('list'); list.innerHTML = "";
-            if(!snapshot.exists()) { list.innerHTML = "No pending requests."; return; }
+            if(!snapshot.exists()) { list.innerHTML = "<p style='color:#777'>No pending requests.</p>"; return; }
+            
             snapshot.forEach((child) => {
                 const d = child.val();
-                // Button ID added specifically to disable it later
-                list.innerHTML += `<div class="req"><p>User Phone: <b>${d.senderPhone}</b> | TrxID: <b style="color:#f1c40f">${d.trxId}</b></p><button id="btn-${child.key}" class="app" onclick="approve('${child.key}', '${d.uid}')">APPROVE</button><button class="rej" onclick="reject('${child.key}')">REJECT</button></div>`;
+                // DISPLAY UPDATE: Showing Sender Wallet and TrxID instead of Phone
+                const html = `
+                <div class="req" id="card-${child.key}">
+                    <div class="info-row">
+                        <span class="label">User Sender Wallet:</span>
+                        <span class="val" style="color:#00d2d3">${d.senderWallet || 'No Address'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Transaction ID (TrxID):</span>
+                        <span class="val" style="color:#f39c12">${d.trxId}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Amount:</span>
+                        <span class="val">$${d.amount}</span>
+                    </div>
+                    <div style="margin-top:15px;">
+                        <button id="btn-${child.key}" class="app" onclick="approve('${child.key}', '${d.uid}')">ACCEPT & ACTIVATE</button>
+                        <button class="rej" onclick="reject('${child.key}')">REJECT</button>
+                    </div>
+                </div>`;
+                list.innerHTML += html;
             });
         });
 
         async function approve(key, uid) {
-            // 1. Disable Button Immediately
             const btn = document.getElementById('btn-' + key);
-            if(btn) { btn.disabled = true; btn.innerText = "Processing..."; }
-
-            // 2. Check if user is ALREADY active (Prevents double bonus)
-            const userSnap = await db.ref('users/'+uid).once('value');
-            const user = userSnap.val();
-
-            if (!user) {
-                showToast("User not found!", "error");
-                return;
-            }
-
-            if (user.status === 'active') {
-                // If already active, just close the request. DO NOT give bonus.
-                await db.ref('activation_requests/'+key).update({status:'approved'});
-                showToast("User was already active. Request cleared.", "error");
-                return;
-            }
-
-            // 3. Load Commission Rates from 'settings/commissions'
-            const ratesSnap = await db.ref('settings/commissions').once('value');
-            const rates = ratesSnap.val() || {level1:0, level2:0, level3:0};
             
-            // 4. Distribute Bonus
-            if(user.referredBy && user.referredBy !== "the_art2000") {
-                await distribute(user.referredBy, 1, rates);
+            // 1. Disable button instantly to prevent double clicks
+            if(btn) { btn.disabled = true; btn.innerText = "Verifying..."; }
+
+            try {
+                // 2. Security Check: Is the request still pending? (Prevents race conditions)
+                const reqRef = db.ref('activation_requests/' + key);
+                const reqSnap = await reqRef.once('value');
+                
+                if (!reqSnap.exists() || reqSnap.val().status !== 'pending') {
+                    showToast("Request already processed by another admin!", "error");
+                    return;
+                }
+
+                // 3. Security Check: Is the user already active?
+                const userRef = db.ref('users/' + uid);
+                const userSnap = await userRef.once('value');
+                const user = userSnap.val();
+
+                if (!user) {
+                    showToast("User data not found!", "error");
+                    reqRef.update({status: 'rejected', reason: 'User not found'});
+                    return;
+                }
+
+                if (user.status === 'active') {
+                    // Update request status but DO NOT give bonus
+                    await reqRef.update({status: 'approved_duplicate', note: 'User was already active'});
+                    showToast("User was already active. Request cleared.", "error");
+                    return;
+                }
+
+                // 4. Everything OK -> Distribute Bonus
+                const ratesSnap = await db.ref('settings/commissions').once('value');
+                const rates = ratesSnap.val() || {level1:0, level2:0, level3:0};
+
+                if(user.referredBy && user.referredBy !== "the_art2000") {
+                    await distribute(user.referredBy, 1, rates);
+                }
+
+                // 5. Final Activation
+                await userRef.update({ status: 'active', activatedAt: firebase.database.ServerValue.TIMESTAMP });
+                await reqRef.update({ status: 'approved' });
+
+                showToast("User Activated Successfully!", "success");
+
+            } catch (error) {
+                console.error(error);
+                showToast("Error activating user: " + error.message, "error");
+                if(btn) { btn.disabled = false; btn.innerText = "ACCEPT & ACTIVATE"; }
             }
-            
-            // 5. Activate User
-            await db.ref('users/'+uid).update({status:'active'});
-            await db.ref('activation_requests/'+key).update({status:'approved'});
-            showToast("User Activated & Bonus Distributed!", "success");
         }
 
         async function distribute(code, lvl, rates) {
             if(lvl > 3) return;
+            // Find referrer by their Invite Code
             const snap = await db.ref('users').orderByChild('ownCode').equalTo(code).once('value');
             
             if(snap.exists()) {
-                const pid = Object.keys(snap.val())[0];
+                const pid = Object.keys(snap.val())[0]; // Parent UID
                 const pdata = Object.values(snap.val())[0];
                 
                 let amt = 0;
-                if(lvl === 1) amt = rates.level1;
-                else if(lvl === 2) amt = rates.level2;
-                else if(lvl === 3) amt = rates.level3;
+                if(lvl === 1) amt = parseFloat(rates.level1);
+                else if(lvl === 2) amt = parseFloat(rates.level2);
+                else if(lvl === 3) amt = parseFloat(rates.level3);
                 
                 if(amt > 0) {
                     await db.ref('users/'+pid).update({
-                        balance: (pdata.balance || 0) + amt
+                        balance: (parseFloat(pdata.balance) || 0) + amt
                     });
                 }
                 
+                // Recursion for next level
                 if(pdata.referredBy && pdata.referredBy !== "the_art2000") {
                     await distribute(pdata.referredBy, lvl+1, rates);
                 }
@@ -114,7 +160,7 @@
         }
 
         function reject(key) { 
-            if(confirm("Are you sure you want to reject?")) {
+            if(confirm("Confirm Reject? user will need to submit again.")) {
                 db.ref('activation_requests/'+key).update({status:'rejected'}); 
                 showToast("Request Rejected", "error");
             }
