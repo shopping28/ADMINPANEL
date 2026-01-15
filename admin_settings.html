@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Settings</title>
+    <title>Admin Settings | Crypto</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -12,28 +12,49 @@
         .card { background: #1a1a2e; padding: 25px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #333; }
         .input-group { margin-bottom: 15px; }
         label { display: block; color: #ccc; font-size: 0.9rem; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; background: #0f0c29; border: 1px solid #444; color: white; border-radius: 8px; }
-        button { width: 100%; padding: 15px; background: #00f260; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #0f0c29; }
+        input { width: 100%; padding: 12px; background: #0f0c29; border: 1px solid #444; color: white; border-radius: 8px; box-sizing: border-box; color: #00f260;}
+        button { width: 100%; padding: 15px; background: #00f260; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #0f0c29; margin-top: 10px; }
+        
+        /* Wallet List Style */
+        .wallet-list { margin-top: 10px; }
+        .w-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; margin-bottom: 5px; border-radius: 5px; font-size: 0.8rem; word-break: break-all; }
+        .del-btn { background: #ff4757; color: white; padding: 5px 10px; border-radius: 5px; cursor: pointer; width: auto; margin: 0; font-size: 0.8rem; }
+        .add-btn { background: #3498db; color: white; }
     </style>
 </head>
 <body>
     <div class="header">
         <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
-        <h2>System Settings</h2>
+        <h2>System Settings (USDT)</h2>
     </div>
 
+    <!-- PAYMENT SETTINGS -->
     <div class="card">
-        <h3 style="color:#f1c40f;"><i class="fas fa-wallet"></i> Payment Info</h3>
-        <div class="input-group"><label>Account Activation Fee (Tk)</label><input type="number" id="actFee"></div>
-        <div class="input-group"><label>Admin Personal Number</label><input type="number" id="adminPhone"></div>
-        <button onclick="savePay()">Update Payment Settings</button>
+        <h3 style="color:#00f260;"><i class="fas fa-coins"></i> Activation Fee Setup</h3>
+        <div class="input-group">
+            <label>Activation Fee (USDT)</label>
+            <input type="number" id="actFee" placeholder="e.g. 10">
+        </div>
+        
+        <label>Manage Admin Wallet Addresses (USDT BEP20)</label>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="newWallet" placeholder="Paste wallet address here (0x...)">
+            <button class="add-btn" style="width: 100px; margin-top:0;" onclick="addWallet()">Add</button>
+        </div>
+        
+        <div id="walletList" class="wallet-list">
+            <!-- Wallets will show here -->
+        </div>
+
+        <button onclick="savePaymentSettings()">Save Payment Settings</button>
     </div>
 
+    <!-- COMMISSION SETTINGS -->
     <div class="card">
-        <h3 style="color:#3498db;"><i class="fas fa-users"></i> Referral Commissions</h3>
-        <div class="input-group"><label>Level 1 Commission</label><input type="number" id="lvl1"></div>
-        <div class="input-group"><label>Level 2 Commission</label><input type="number" id="lvl2"></div>
-        <div class="input-group"><label>Level 3 Commission</label><input type="number" id="lvl3"></div>
+        <h3 style="color:#3498db;"><i class="fas fa-network-wired"></i> Team Commissions (USDT)</h3>
+        <div class="input-group"><label>Level 1 Commission ($)</label><input type="number" id="lvl1"></div>
+        <div class="input-group"><label>Level 2 Commission ($)</label><input type="number" id="lvl2"></div>
+        <div class="input-group"><label>Level 3 Commission ($)</label><input type="number" id="lvl3"></div>
         <button onclick="saveRef()">Update Commissions</button>
     </div>
 
@@ -44,10 +65,22 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        let walletsArray = [];
+
+        // Load Data
         db.ref('settings').once('value', (snap) => {
             const d = snap.val() || {};
-            if(d.payment) { document.getElementById('actFee').value = d.payment.fee; document.getElementById('adminPhone').value = d.payment.number; }
-            // Correct Path Used Here
+            
+            // Load Fee
+            if(d.payment) { 
+                document.getElementById('actFee').value = d.payment.fee;
+                if(d.payment.wallets) {
+                    walletsArray = d.payment.wallets;
+                    renderWallets();
+                }
+            }
+            
+            // Load Commissions
             if(d.commissions) { 
                 document.getElementById('lvl1').value = d.commissions.level1; 
                 document.getElementById('lvl2').value = d.commissions.level2; 
@@ -55,9 +88,39 @@
             }
         });
 
-        function savePay() {
-            db.ref('settings/payment').set({ fee: Number(document.getElementById('actFee').value), number: document.getElementById('adminPhone').value })
-            .then(() => alert("Payment Info Updated!"));
+        // Wallet Functions
+        function addWallet() {
+            const w = document.getElementById('newWallet').value.trim();
+            if(!w) return alert("Enter an address");
+            walletsArray.push(w);
+            document.getElementById('newWallet').value = "";
+            renderWallets();
+        }
+
+        function removeWallet(index) {
+            walletsArray.splice(index, 1);
+            renderWallets();
+        }
+
+        function renderWallets() {
+            const div = document.getElementById('walletList');
+            div.innerHTML = "";
+            walletsArray.forEach((w, i) => {
+                div.innerHTML += `
+                    <div class="w-item">
+                        <span>${w}</span>
+                        <button class="del-btn" onclick="removeWallet(${i})"><i class="fas fa-trash"></i></button>
+                    </div>`;
+            });
+        }
+
+        function savePaymentSettings() {
+            if(walletsArray.length === 0) return alert("Add at least one wallet address!");
+            db.ref('settings/payment').set({ 
+                fee: Number(document.getElementById('actFee').value), 
+                wallets: walletsArray 
+            })
+            .then(() => alert("Payment Settings Saved!"));
         }
 
         function saveRef() {
