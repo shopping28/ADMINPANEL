@@ -157,8 +157,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <script>
-        // --- 1. CONFIGURATION ---
+<script>
+        // --- CONFIGURATION ---
         const firebaseConfig = { 
             apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", 
             authDomain: "art-paid-work001.firebaseapp.com", 
@@ -171,9 +171,9 @@
         
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const RATE = 120; // USD Conversion Rate
+        const RATE = 120; 
 
-        // --- 2. UTILITIES ---
+        // --- UTILS ---
         function showToast(msg, type='success') {
             const box = document.getElementById('toast-box');
             const t = document.createElement('div');
@@ -184,7 +184,7 @@
             setTimeout(() => t.remove(), 3000);
         }
 
-        // --- 3. LOAD RULES ---
+        // --- LOAD SETTINGS ---
         db.ref('settings/withdraw_rules').on('value', snap => {
             const d = snap.val();
             if(d) {
@@ -200,29 +200,32 @@
               .then(() => showToast("Rules Updated Successfully!"));
         }
 
-        // --- 4. LOAD REQUESTS ---
-        db.ref('withdraw_requests').orderByChild('status').equalTo('pending').on('value', snap => {
+        // --- LOAD REQUESTS (FIXED & FASTER) ---
+        // এখানে limitToLast(100) যোগ করা হয়েছে যাতে দ্রুত লোড হয়
+        db.ref('withdraw_requests')
+          .orderByChild('status')
+          .equalTo('pending')
+          .limitToLast(100) 
+          .on('value', snap => {
             const list = document.getElementById('request-list');
             list.innerHTML = "";
 
             if(!snap.exists()) {
-                list.innerHTML = "<div style='text-align:center; padding:40px; color:#555;'>No pending requests found.</div>";
+                list.innerHTML = "<div style='text-align:center; padding:40px; color:#aaa;'>No pending requests found.</div>";
                 return;
             }
 
             snap.forEach(child => {
                 const req = child.val();
                 const key = child.key;
-
-                // Amount Logic (Handle new USDT or old BDT)
+                
                 let displayAmt = "0.00";
-                let refundAmt = 0; // Amount to refund in BDT if rejected
+                let refundAmt = 0;
 
                 if (req.amountUSDT) {
                     displayAmt = parseFloat(req.amountUSDT).toFixed(2);
-                    refundAmt = req.amountBDT; // Already calculated at request time
+                    refundAmt = req.amountBDT;
                 } else {
-                    // Fallback for old data
                     refundAmt = parseFloat(req.amount || 0);
                     displayAmt = (refundAmt / RATE).toFixed(2);
                 }
@@ -236,18 +239,13 @@
                             </div>
                             <div class="amount-txt">$${displayAmt}</div>
                         </div>
-
                         <div class="wallet-box">
                             <span style="color:#f1c40f; font-size:0.7rem;">WALLET:</span> ${req.wallet}
                         </div>
-
-                        <!-- Hidden User Info -->
                         <div id="user-${key}" class="user-details">Loading Info...</div>
-
                         <button class="btn btn-view" onclick="viewUser('${req.uid}', '${key}')">
                             <i class="fas fa-user-shield"></i> Check User Info
                         </button>
-
                         <div class="action-area">
                             <button class="btn btn-approve" onclick="process('${key}', 'approve', 0, '${req.uid}')">
                                 <i class="fas fa-check"></i> Approve
@@ -258,15 +256,16 @@
                         </div>
                     </div>
                 `;
-                list.innerHTML += html;
+                // নতুন রিকোয়েস্ট উপরে দেখানোর জন্য prepend ব্যবহার করা হলো না কারণ Firebase উল্টো অর্ডার দেয়,
+                // তাই সাধারণ append রাখছি, তবে Firebase এর নিয়ম অনুযায়ী এটি নিচ থেকে উপরে আসবে।
+                list.insertAdjacentHTML('afterbegin', html); 
             });
         });
 
-        // --- 5. VIEW USER ---
+        // --- VIEW USER ---
         function viewUser(uid, key) {
             const div = document.getElementById(`user-${key}`);
             if(div.style.display === 'block') { div.style.display = 'none'; return; }
-            
             div.style.display = 'block';
             db.ref('users/' + uid).once('value', s => {
                 const u = s.val();
@@ -281,29 +280,23 @@
             });
         }
 
-        // --- 6. APPROVE / REJECT LOGIC ---
+        // --- ACTIONS ---
         function process(key, action, refundAmt, uid) {
             if(action === 'approve') {
-                if(!confirm("Confirm Payment Sent? This cannot be undone.")) return;
-                
+                if(!confirm("Confirm Payment?")) return;
                 db.ref('withdraw_requests/' + key).update({
                     status: 'approved',
                     processed_at: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => showToast("Withdraw Approved!"));
-            } 
-            else {
-                // REJECT Logic
-                if(!confirm("Are you sure? This will REFUND the balance to the user.")) return;
-
-                // 1. Refund Balance
+                }).then(() => showToast("Approved!"));
+            } else {
+                if(!confirm("Reject & Refund?")) return;
                 db.ref('users/' + uid + '/balance').transaction(curr => (curr || 0) + refundAmt)
                 .then(() => {
-                    // 2. Mark Request Rejected
                     db.ref('withdraw_requests/' + key).update({
                         status: 'rejected',
                         processed_at: firebase.database.ServerValue.TIMESTAMP
                     });
-                    showToast("Rejected & Refunded Successfully", "error");
+                    showToast("Refunded & Rejected", "error");
                 });
             }
         }
