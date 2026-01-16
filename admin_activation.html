@@ -2,34 +2,67 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Activations</title>
+    <title>Manage Activations</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        .req { background: #1a1a2e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #444; border-left: 5px solid #f39c12; }
-        .info-row { margin-bottom: 10px; font-size: 0.95rem; }
-        .label { color: #aaa; font-size: 0.8rem; display: block; }
+        
+        .header { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .back-btn { color: #aaa; text-decoration: none; font-size: 1.1rem; margin-right: 15px; transition: 0.3s; }
+        .back-btn:hover { color: #fff; }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .req-card { 
+            background: #1a1a2e; padding: 20px; border-radius: 12px; 
+            margin-bottom: 15px; border: 1px solid #333; 
+            border-left: 5px solid #f39c12; 
+            display: flex; flex-direction: column; gap: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+        .row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        
+        .label { color: #aaa; font-size: 0.85rem; }
         .val { color: #fff; font-weight: 600; font-family: monospace; letter-spacing: 0.5px; }
+        .val.wallet { color: #00d2d3; word-break: break-all; }
+        .val.trx { color: #f39c12; }
         
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-right: 10px; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .app { background: #00f260; color: #000; } 
-        .app:disabled { background: #555; cursor: not-allowed; color: #ccc; }
-        .rej { background: #e74c3c; color: white; }
+        .actions { display: flex; gap: 10px; margin-top: 10px; }
         
-        /* Toast CSS */
+        button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; flex: 1; }
+        button:active { transform: scale(0.98); }
+        .btn-approve { background: #00f260; color: #000; }
+        .btn-approve:disabled { background: #555; color: #aaa; cursor: not-allowed; }
+        .btn-reject { background: #ff4757; color: white; }
+
+        /* Toast Notification */
         #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260; display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards; }
-        .toast.error { border-left-color: #e74c3c; }
+        .toast { background: #1e1e2f; color: white; min-width: 280px; padding: 15px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border-left: 5px solid #00f260; display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards; }
+        .toast.error { border-left-color: #ff4757; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
-    <div id="toast-box"></div>
-    <a href="admin_dashboard.html" style="color:#aaa; text-decoration:none;">← Back to Dashboard</a>
-    <h2>Pending Activations</h2>
-    <div id="list">Loading...</div>
 
+    <div id="toast-box"></div>
+
+    <div class="container">
+        <div class="header">
+            <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+            <h2>Pending Requests</h2>
+        </div>
+
+        <div id="list">
+            <div style="text-align:center; color:#777; margin-top:50px;">
+                <i class="fas fa-circle-notch fa-spin"></i> Loading requests...
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
@@ -37,130 +70,158 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
+        // Toast Function
         function showToast(msg, type = 'success') {
             const box = document.getElementById('toast-box');
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            t.innerHTML = type === 'success' ? `✅ ${msg}` : `❌ ${msg}`;
+            t.innerHTML = type === 'success' ? `<i class="fas fa-check-circle" style="color:#00f260"></i> ${msg}` : `<i class="fas fa-times-circle" style="color:#ff4757"></i> ${msg}`;
             box.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 3000);
         }
 
-        // Real-time listener for Pending Requests
+        // Realtime Listener
         db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', (snapshot) => {
-            const list = document.getElementById('list'); list.innerHTML = "";
-            if(!snapshot.exists()) { list.innerHTML = "<p style='color:#777'>No pending requests.</p>"; return; }
+            const list = document.getElementById('list'); 
+            list.innerHTML = "";
+            
+            if(!snapshot.exists()) { 
+                list.innerHTML = "<div style='text-align:center; color:#777; margin-top:50px;'>No pending requests found.</div>"; 
+                return; 
+            }
             
             snapshot.forEach((child) => {
                 const d = child.val();
-                // DISPLAY UPDATE: Showing Sender Wallet and TrxID instead of Phone
                 const html = `
-                <div class="req" id="card-${child.key}">
-                    <div class="info-row">
-                        <span class="label">User Sender Wallet:</span>
-                        <span class="val" style="color:#00d2d3">${d.senderWallet || 'No Address'}</span>
+                <div class="req-card" id="card-${child.key}">
+                    <div class="row">
+                        <div>
+                            <div class="label">Sender Wallet</div>
+                            <div class="val wallet">${d.senderWallet || 'N/A'}</div>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="label">Transaction ID (TrxID):</span>
-                        <span class="val" style="color:#f39c12">${d.trxId}</span>
+                    <div class="row">
+                        <div>
+                            <div class="label">Transaction ID (TrxID)</div>
+                            <div class="val trx">${d.trxId}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="label">Amount</div>
+                            <div class="val">$${d.amount}</div>
+                        </div>
                     </div>
-                    <div class="info-row">
-                        <span class="label">Amount:</span>
-                        <span class="val">$${d.amount}</span>
-                    </div>
-                    <div style="margin-top:15px;">
-                        <button id="btn-${child.key}" class="app" onclick="approve('${child.key}', '${d.uid}')">ACCEPT & ACTIVATE</button>
-                        <button class="rej" onclick="reject('${child.key}')">REJECT</button>
+                    
+                    <div class="actions">
+                        <button id="btn-${child.key}" class="btn-approve" onclick="approve('${child.key}', '${d.uid}')">
+                            <i class="fas fa-check"></i> APPROVE & ACTIVATE
+                        </button>
+                        <button class="btn-reject" onclick="reject('${child.key}')">
+                            <i class="fas fa-times"></i> REJECT
+                        </button>
                     </div>
                 </div>`;
-                list.innerHTML += html;
+                list.innerHTML = html + list.innerHTML; // Newest top
             });
         });
 
+        // === MAIN APPROVE LOGIC ===
         async function approve(key, uid) {
             const btn = document.getElementById('btn-' + key);
-            
-            // 1. Disable button instantly to prevent double clicks
-            if(btn) { btn.disabled = true; btn.innerText = "Verifying..."; }
+            if(btn) { btn.disabled = true; btn.innerText = "Processing..."; }
 
             try {
-                // 2. Security Check: Is the request still pending? (Prevents race conditions)
                 const reqRef = db.ref('activation_requests/' + key);
+                const userRef = db.ref('users/' + uid);
+
+                // 1. Double check status (Security)
                 const reqSnap = await reqRef.once('value');
-                
                 if (!reqSnap.exists() || reqSnap.val().status !== 'pending') {
-                    showToast("Request already processed by another admin!", "error");
-                    return;
+                    showToast("Request handled by another admin!", "error"); return;
                 }
 
-                // 3. Security Check: Is the user already active?
-                const userRef = db.ref('users/' + uid);
+                // 2. Check User Status
                 const userSnap = await userRef.once('value');
                 const user = userSnap.val();
-
-                if (!user) {
-                    showToast("User data not found!", "error");
-                    reqRef.update({status: 'rejected', reason: 'User not found'});
-                    return;
-                }
-
+                if (!user) { showToast("User data missing!", "error"); return; }
                 if (user.status === 'active') {
-                    // Update request status but DO NOT give bonus
-                    await reqRef.update({status: 'approved_duplicate', note: 'User was already active'});
-                    showToast("User was already active. Request cleared.", "error");
-                    return;
+                    await reqRef.update({status: 'approved_duplicate', note: 'Already active'});
+                    showToast("User was already active.", "error"); return;
                 }
 
-                // 4. Everything OK -> Distribute Bonus
-                const ratesSnap = await db.ref('settings/commissions').once('value');
-                const rates = ratesSnap.val() || {level1:0, level2:0, level3:0};
+                // 3. Load Dynamic Settings (The crucial part)
+                // We check 'commissions_dynamic' array first, fallback to old if missing
+                const setSnap = await db.ref('settings').once('value');
+                const settings = setSnap.val() || {};
+                
+                let dynamicRates = [];
+                if(settings.commissions_dynamic) {
+                    dynamicRates = settings.commissions_dynamic;
+                } else if(settings.commissions) {
+                    // Fallback to old 3 level system
+                    dynamicRates = [
+                        {level: 1, amount: settings.commissions.level1},
+                        {level: 2, amount: settings.commissions.level2},
+                        {level: 3, amount: settings.commissions.level3}
+                    ];
+                }
 
+                // 4. Distribute Bonus Dynamically
                 if(user.referredBy && user.referredBy !== "the_art2000") {
-                    await distribute(user.referredBy, 1, rates);
+                    await distributeDynamic(user.referredBy, 1, dynamicRates);
                 }
 
-                // 5. Final Activation
-                await userRef.update({ status: 'active', activatedAt: firebase.database.ServerValue.TIMESTAMP });
+                // 5. Activate User & Lock Rates
+                await userRef.update({ 
+                    status: 'active', 
+                    activatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    locked_commissions: dynamicRates // Save current structure for history
+                });
+                
+                // 6. Finalize Request
                 await reqRef.update({ status: 'approved' });
 
-                showToast("User Activated Successfully!", "success");
+                showToast("Activation Successful!", "success");
 
             } catch (error) {
                 console.error(error);
-                showToast("Error activating user: " + error.message, "error");
-                if(btn) { btn.disabled = false; btn.innerText = "ACCEPT & ACTIVATE"; }
+                showToast("Error: " + error.message, "error");
+                if(btn) { btn.disabled = false; btn.innerText = "RETRY"; }
             }
         }
 
-        async function distribute(code, lvl, rates) {
-            if(lvl > 3) return;
-            // Find referrer by their Invite Code
-            const snap = await db.ref('users').orderByChild('ownCode').equalTo(code).once('value');
+        // Recursive Distribution Function
+        async function distributeDynamic(currentUplineCode, currentLevel, ratesConfig) {
+            // Find rate for current level (Array index is level-1)
+            const rateObj = ratesConfig.find(r => r.level === currentLevel);
+            
+            // If no rate defined for this level (e.g. Level 4 but only 3 set), stop.
+            if(!rateObj) return;
+
+            // Find the upline user by Code
+            const snap = await db.ref('users').orderByChild('ownCode').equalTo(currentUplineCode).once('value');
             
             if(snap.exists()) {
-                const pid = Object.keys(snap.val())[0]; // Parent UID
-                const pdata = Object.values(snap.val())[0];
+                const uplineUid = Object.keys(snap.val())[0];
+                const uplineData = Object.values(snap.val())[0];
+
+                const bonusAmount = parseFloat(rateObj.amount);
                 
-                let amt = 0;
-                if(lvl === 1) amt = parseFloat(rates.level1);
-                else if(lvl === 2) amt = parseFloat(rates.level2);
-                else if(lvl === 3) amt = parseFloat(rates.level3);
-                
-                if(amt > 0) {
-                    await db.ref('users/'+pid).update({
-                        balance: (parseFloat(pdata.balance) || 0) + amt
+                // Give Money if amount > 0
+                if(bonusAmount > 0) {
+                    await db.ref('users/'+uplineUid).update({
+                        balance: (parseFloat(uplineData.balance) || 0) + bonusAmount
                     });
                 }
-                
-                // Recursion for next level
-                if(pdata.referredBy && pdata.referredBy !== "the_art2000") {
-                    await distribute(pdata.referredBy, lvl+1, rates);
+
+                // Continue to next level up, if referrer exists
+                if(uplineData.referredBy && uplineData.referredBy !== "the_art2000") {
+                    await distributeDynamic(uplineData.referredBy, currentLevel + 1, ratesConfig);
                 }
             }
         }
 
         function reject(key) { 
-            if(confirm("Confirm Reject? user will need to submit again.")) {
+            if(confirm("Are you sure you want to REJECT this payment?")) {
                 db.ref('activation_requests/'+key).update({status:'rejected'}); 
                 showToast("Request Rejected", "error");
             }
