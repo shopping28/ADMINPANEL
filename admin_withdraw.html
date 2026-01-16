@@ -3,57 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Withdrawals</title>
+    <title>Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
-        /* === PREMIUM ADMIN UI === */
-        :root { --bg: #0f0c29; --card: #1b1b2f; --gold: #f1c40f; --green: #00f260; --red: #ff4757; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
         
-        body { background: var(--bg); color: white; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        
-        .header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-        .back-btn { background: #222; padding: 8px 15px; border-radius: 8px; text-decoration: none; color: #ccc; }
-        
-        .card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; border-left: 5px solid #3498db; }
-        .row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .amt { font-size: 1.4rem; font-weight: bold; color: var(--green); }
-        .wallet { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; font-family: monospace; color: #ccc; word-break: break-all; margin-bottom: 15px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        a { color: #ccc; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px; }
 
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-        button:hover { opacity: 0.9; }
+        .card { background: #1a1a2e; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; border-left: 5px solid #3498db; }
+        .row { display: flex; justify-content: space-between; font-weight: bold; }
+        .wallet { background: #222; padding: 5px; font-family: monospace; font-size: 0.9rem; word-break: break-all; margin: 10px 0; color: #ccc; }
         
-        .btn-user { background: #34495e; width: 100%; margin-bottom: 10px; }
-        .btn-app { background: var(--green); color: black; }
-        .btn-rej { background: var(--red); }
-
-        .user-info { background: #000; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: none; }
-        .info-line { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #222; }
-
-        #toast-box { position: fixed; top: 20px; right: 20px; }
-        .toast { background: #222; color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid var(--green); }
+        button { padding: 8px 15px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; margin-right: 5px; }
+        .app { background: #00f260; color: black; }
+        .rej { background: #ff4757; color: white; }
+        .chk { background: #444; color: white; width: 100%; margin-bottom: 5px; }
+        
+        .info { background: black; padding: 10px; margin-bottom: 5px; display: none; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <div id="toast-box"></div>
-
     <div class="container">
         <div class="header">
-            <a href="admin_dashboard.html" class="back-btn">Dashboard</a>
-            <h3>Withdraw Requests</h3>
+            <h3>Pending Withdrawals</h3>
+            <a href="admin_dashboard.html">Dashboard</a>
         </div>
 
-        <div style="margin-bottom:20px; color:#aaa; font-size:0.9rem;">PENDING REQUESTS</div>
         <div id="list">
-            <div style="text-align:center; padding:50px; color:#555;">Loading...</div>
+            <div style="text-align:center; padding:50px;">Loading...</div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -63,79 +47,65 @@
         const db = firebase.database();
         const RATE = 120;
 
-        function showToast(msg) {
-            const box = document.getElementById('toast-box');
-            const d = document.createElement('div');
-            d.className = 'toast'; d.innerText = msg;
-            box.appendChild(d); setTimeout(() => d.remove(), 3000);
-        }
-
-        // FAST LOADING with limitToLast(50)
+        // পেন্ডিং রিকোয়েস্ট লোড করা (ফাস্ট লোডিংয়ের জন্য limitToLast ব্যবহার করা হয়েছে)
         db.ref('withdraw_requests').orderByChild('status').equalTo('pending').limitToLast(50).on('value', snap => {
             const list = document.getElementById('list'); list.innerHTML = "";
             
-            if(!snap.exists()) {
-                list.innerHTML = "<div style='text-align:center; padding:30px; color:#555'>No Pending Requests</div>";
-                return;
-            }
+            if(!snap.exists()) { list.innerHTML = "<p style='text-align:center'>No Pending Requests</p>"; return; }
 
-            snap.forEach(child => {
-                const r = child.val();
-                const key = child.key;
+            snap.forEach(c => {
+                const r = c.val();
+                const k = c.key;
+                let refAmt = r.amountBDT || r.amount; // কত টাকা রিফান্ড করতে হবে
 
-                let showUSD = r.amountUSDT ? r.amountUSDT.toFixed(2) : (r.amount/RATE).toFixed(2);
-                let refundBDT = r.amountBDT || r.amount;
-
-                const html = `
-                    <div class="card" id="c-${key}">
+                list.insertAdjacentHTML('afterbegin', `
+                    <div class="card">
                         <div class="row">
-                            <span style="background:#222; padding:5px 10px; border-radius:5px; font-size:0.8rem; color:#3498db;">${r.method}</span>
-                            <span class="amt">$${showUSD}</span>
+                            <span style="color:#3498db">${r.method}</span>
+                            <span style="color:#00f260">$${r.amountUSDT}</span>
                         </div>
-                        <div class="wallet">WALLET: ${r.wallet}</div>
+                        <div class="wallet">To: ${r.wallet}</div>
                         
-                        <div id="u-${key}" class="user-info">Loading...</div>
-                        <button class="btn-user" onclick="checkUser('${r.uid}', '${key}')">Check User</button>
+                        <div id="u-${k}" class="info">Loading...</div>
+                        <button class="chk" onclick="viewUser('${r.uid}', '${k}')">Check User Info</button>
 
-                        <div class="btn-group">
-                            <button class="btn-app" onclick="act('${key}', 'app', 0, '${r.uid}')">APPROVE</button>
-                            <button class="btn-rej" onclick="act('${key}', 'rej', ${refundBDT}, '${r.uid}')">REJECT & REFUND</button>
+                        <div>
+                            <button class="app" onclick="act('${k}', 'app', 0, '${r.uid}')">Approve</button>
+                            <button class="rej" onclick="act('${k}', 'rej', ${refAmt}, '${r.uid}')">Reject & Refund</button>
                         </div>
                     </div>
-                `;
-                list.insertAdjacentHTML('afterbegin', html);
+                `);
             });
         });
 
-        function checkUser(uid, key) {
-            const d = document.getElementById('u-'+key);
-            if(d.style.display === 'block') { d.style.display='none'; return; }
-            d.style.display='block';
-            
+        // ইউজার ইনফো দেখার জন্য
+        function viewUser(uid, k) {
+            const el = document.getElementById('u-'+k);
+            if(el.style.display=='block') { el.style.display='none'; return; }
+            el.style.display='block';
             db.ref('users/'+uid).once('value', s => {
                 const u = s.val() || {};
                 const b = (parseFloat(u.balance||0)/RATE).toFixed(2);
-                d.innerHTML = `
-                    <div class="info-line"><span>Name:</span> <b>${u.firstName}</b></div>
-                    <div class="info-line"><span>Phone:</span> <b>${u.phone}</b></div>
-                    <div class="info-line"><span>Pass:</span> <b style="color:gold">${u.password}</b></div>
-                    <div class="info-line"><span>Balance:</span> <b style="color:lime">$${b}</b></div>
-                `;
+                el.innerHTML = `Name: ${u.firstName} <br> Phone: ${u.phone} <br> Pass: ${u.password} <br> Balance: $${b}`;
             });
         }
 
-        function act(key, type, amount, uid) {
+        // অ্যাকশন (Approve / Reject)
+        function act(key, type, amt, uid) {
             if(type === 'app') {
-                if(!confirm("Approve Payment?")) return;
-                db.ref('withdraw_requests/'+key).update({status:'approved', processed: Date.now()})
-                  .then(() => showToast("Approved!"));
+                if(confirm("Confirm Approve?")) {
+                    db.ref('withdraw_requests/'+key).update({status:'approved', processed: Date.now()});
+                }
             } else {
-                if(!confirm("Reject & Refund?")) return;
-                db.ref('users/'+uid+'/balance').transaction(c => (c||0) + amount)
-                  .then(() => {
-                      db.ref('withdraw_requests/'+key).update({status:'rejected', processed: Date.now()});
-                      showToast("Rejected & Refunded");
-                  });
+                if(confirm("Reject & Refund?")) {
+                    // ১. টাকা ফেরত দেওয়া
+                    db.ref('users/'+uid+'/balance').transaction(c => (c||0) + amt)
+                    .then(() => {
+                        // ২. রিকোয়েস্ট রিজেক্ট করা
+                        db.ref('withdraw_requests/'+key).update({status:'rejected', processed: Date.now()});
+                        alert("Refunded & Rejected");
+                    });
+                }
             }
         }
     </script>
