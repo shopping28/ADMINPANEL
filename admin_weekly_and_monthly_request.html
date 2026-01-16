@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Requests & Rewards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-dark: #0f172a; --card-bg: #1e293b; --primary: #3b82f6; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; }
+        body { background-color: var(--bg-dark); color: #fff; font-family: 'Outfit', sans-serif; padding: 20px; }
+        
+        h2 { border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 20px; font-weight: 800; color: var(--primary); }
+
+        .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .tool-card { background: var(--card-bg); border: 1px solid #334155; padding: 20px; border-radius: 16px; }
+        .tool-title { font-weight: 700; margin-bottom: 10px; display: block; color: #cbd5e1; }
+        .btn-tool { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; color: #000; transition: 0.2s; }
+        .btn-tool:hover { opacity: 0.9; transform: translateY(-2px); }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .card { background: var(--card-bg); border: 1px solid #334155; padding: 20px; border-radius: 16px; transition: 0.3s; }
+        .card:hover { transform: translateY(-3px); border-color: var(--primary); }
+
+        .rc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .rc-uid { font-family: monospace; font-size: 0.9rem; color: #94a3b8; background: #0f172a; padding: 4px 8px; border-radius: 6px; }
+        .rc-badge { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; }
+        .bg-weekly { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .bg-monthly { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+
+        .rc-level { font-size: 1.2rem; font-weight: 700; color: #fff; margin: 5px 0; }
+        .rc-info { font-size: 0.85rem; color: #cbd5e1; margin-bottom: 15px; }
+        
+        .btn-group { display: flex; gap: 10px; }
+        .btn { flex: 1; padding: 10px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn-acc { background: var(--success); color: #fff; }
+        .btn-rej { background: #334155; color: #cbd5e1; }
+        .btn-rej:hover { background: var(--danger); color: #fff; }
+
+        /* MODAL */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 100; }
+        .modal-box { background: var(--card-bg); padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; border: 1px solid #334155; }
+        textarea, input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 8px; padding: 10px; box-sizing: border-box; margin: 10px 0; }
+        .modal-act { display: flex; justify-content: flex-end; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- TOOLS -->
+    <h2>🛠️ Admin Tools</h2>
+    <div class="tools-grid">
+        <div class="tool-card">
+            <span class="tool-title">🎁 Gift Everyone</span>
+            <button class="btn-tool" style="background:var(--success); color:white;" onclick="giveFreeCreditsToAll(2)">Give 2 Credits to ALL</button>
+        </div>
+        <div class="tool-card">
+            <span class="tool-title">🔄 System Cleanup</span>
+            <button class="btn-tool" style="background:var(--warning);" onclick="rejectAllAndRefund()">Reject All & Refund</button>
+        </div>
+        <div class="tool-card">
+            <span class="tool-title">⚡ Reset User</span>
+            <input type="text" id="resetUid" placeholder="Enter User UID">
+            <button class="btn-tool" style="background:var(--danger); color:white;" onclick="resetUserLevel()">Reset Level</button>
+        </div>
+    </div>
+
+    <!-- TARGET APPLICATIONS -->
+    <h2>🚀 New Target Applications</h2>
+    <div id="targetList" class="grid"><p style="color:#64748b">Loading applications...</p></div>
+
+    <!-- REWARD CLAIMS -->
+    <h2 style="color:var(--success); margin-top:40px;">💰 Reward Claims (Review Payment)</h2>
+    <div id="rewardList" class="grid"><p style="color:#64748b">Loading claims...</p></div>
+
+    <!-- REJECT MODAL -->
+    <div class="modal" id="rejectModal">
+        <div class="modal-box">
+            <h3 style="margin-top:0; color:var(--danger)">Reject Application</h3>
+            <p style="font-size:0.9rem; color:#94a3b8;">Reason for rejection:</p>
+            <textarea id="rejectReason" placeholder="e.g. Activity too low..."></textarea>
+            <div class="modal-act">
+                <button class="btn btn-rej" onclick="closeModal()" style="background:transparent; border:1px solid #334155;">Cancel</button>
+                <button class="btn btn-rej" style="background:var(--danger); color:white;" onclick="confirmReject()">Confirm Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let selectedRequestKey = null;
+        let selectedUserUid = null;
+        let refundCost = 0;
+
+        // --- TOOLS ---
+        function giveFreeCreditsToAll(amount) {
+            if(!confirm(`Add ${amount} Credits to ALL users?`)) return;
+            db.ref('users').once('value', snap => {
+                const updates = {};
+                let count = 0;
+                snap.forEach(child => {
+                    const u = child.val();
+                    if(u.status === 'active') {
+                        updates['users/' + child.key + '/credits'] = (u.credits || 0) + amount;
+                        count++;
+                    }
+                });
+                if(count > 0) db.ref().update(updates).then(() => alert(`Sent to ${count} users.`));
+            });
+        }
+
+        function rejectAllAndRefund() {
+            if(!confirm("Reject ALL pending requests & refund?")) return;
+            db.ref('target_requests').orderByChild('status').equalTo('pending').once('value', snap => {
+                if(!snap.exists()) return alert("No pending requests.");
+                const updates = {};
+                let count = 0;
+                snap.forEach(child => {
+                    const req = child.val();
+                    updates['target_requests/' + child.key + '/status'] = 'rejected';
+                    updates['target_requests/' + child.key + '/reason'] = "System Reset";
+                    db.ref('users/' + req.uid + '/credits').transaction(c => (c || 0) + req.cost);
+                    updates['users/' + req.uid + '/last_rejection'] = "System Reset: Credits Refunded.";
+                    updates['users/' + req.uid + '/rejection_seen'] = false;
+                    count++;
+                });
+                db.ref().update(updates).then(() => { alert(`Cleared ${count} requests.`); location.reload(); });
+            });
+        }
+
+        function resetUserLevel() {
+            const uid = document.getElementById('resetUid').value.trim();
+            if(!uid) return alert("Enter UID");
+            if(!confirm("Reset User Level?")) return;
+            const updates = {};
+            updates['users/' + uid + '/active_target'] = null;
+            updates['users/' + uid + '/completed_levels'] = null;
+            db.ref().update(updates).then(() => alert("User Reset!"));
+        }
+
+        // --- LOAD TARGET APPLICATIONS ---
+        db.ref('target_requests').orderByChild('status').equalTo('pending').on('value', snap => {
+            const list = document.getElementById('targetList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<p style='color:#64748b; grid-column:1/-1; text-align:center;'>No new applications.</p>"; return; }
+            snap.forEach(child => {
+                const r = child.val();
+                const badge = r.type === 'weekly' ? 'bg-weekly' : 'bg-monthly';
+                const date = new Date(r.timestamp).toLocaleDateString();
+                
+                list.innerHTML += `
+                    <div class="card">
+                        <div class="rc-header">
+                            <span class="rc-uid">${r.uid.substring(0,6)}...</span>
+                            <span class="rc-badge ${badge}">${r.type}</span>
+                        </div>
+                        <div class="rc-level">Level ${r.level}</div>
+                        <div class="rc-info">
+                            Target: <span>${r.targetCount} Refs</span><br>
+                            Cost: <b>${r.cost} Credits</b><br>
+                            Date: ${date}
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-acc" onclick="acceptTarget('${child.key}', '${r.uid}', '${r.type}', ${r.level}, ${r.targetCount}, ${r.reward})">Approve</button>
+                            <button class="btn btn-rej" onclick="openRejectModal('${child.key}', '${r.uid}', ${r.cost})">Reject</button>
+                        </div>
+                    </div>`;
+            });
+        });
+
+        // --- LOAD REWARD CLAIMS ---
+        db.ref('reward_requests').orderByChild('status').equalTo('pending').on('value', snap => {
+            const list = document.getElementById('rewardList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<p style='color:#64748b; grid-column:1/-1; text-align:center;'>No pending claims.</p>"; return; }
+            snap.forEach(child => {
+                const r = child.val();
+                list.innerHTML += `
+                    <div class="card" style="border-color:var(--success);">
+                        <div class="rc-header">
+                            <span class="rc-uid">${r.uid.substring(0,6)}...</span>
+                            <span class="rc-badge" style="background:#10b98120; color:#10b981;">CLAIM</span>
+                        </div>
+                        <h3 style="margin:5px 0; color:var(--success);">$${r.reward}</h3>
+                        <div class="rc-info">
+                            ${r.type.toUpperCase()} Level ${r.level}<br>
+                            Target Met: <b>${r.targetCount}</b>
+                        </div>
+                        <div style="margin-bottom:10px; color:#facc15; font-size:0.8rem;">⚠️ Verify User Activity First!</div>
+                        <button class="btn btn-acc" style="width:100%;" onclick="approveReward('${child.key}', '${r.uid}', ${r.reward}, ${r.level}, '${r.type}')">PAY & RESET</button>
+                    </div>`;
+            });
+        });
+
+        // ACTIONS - TARGET
+        function acceptTarget(key, uid, type, level, target, reward) {
+            if(!confirm("Approve and start timer?")) return;
+            
+            db.ref('users/'+uid+'/ownCode').once('value', s => {
+                const myCode = s.val();
+                let currentActive = 0;
+                db.ref('users').orderByChild('referredBy').equalTo(myCode).once('value', ts => {
+                    ts.forEach(m => { if(m.val().status==='active') currentActive++; });
+                    
+                    const duration = type === 'weekly' ? 7 : 30;
+                    const endTime = Date.now() + (duration * 24 * 60 * 60 * 1000);
+                    
+                    const activeData = { type, level, targetCount: target, reward, startCount: currentActive, startTime: Date.now(), endTime, status: 'active' };
+                    
+                    const up = {};
+                    up['users/'+uid+'/active_target'] = activeData;
+                    up['target_requests/'+key+'/status'] = 'approved';
+                    db.ref().update(up).then(()=>alert("Approved!"));
+                });
+            });
+        }
+
+        function rejectTarget(key, uid, cost) {
+            if(!confirm("Reject and refund?")) return;
+            const up = {};
+            up['target_requests/'+key+'/status'] = 'rejected';
+            up['users/'+uid+'/credits'] = firebase.database.ServerValue.increment(parseFloat(cost));
+            db.ref().update(up).then(()=>alert("Rejected & Refunded"));
+        }
+
+        // ACTIONS - REWARD
+        function approveReward(key, uid, reward) {
+            if(!confirm(`Send $${reward} to user and RESET target?`)) return;
+            
+            const up = {};
+            // 1. Pay User
+            up['users/'+uid+'/balance'] = firebase.database.ServerValue.increment(parseFloat(reward));
+            // 2. Add to History
+            const historyKey = db.ref('users/'+uid+'/target_rewards').push().key;
+            up['users/'+uid+'/target_rewards/'+historyKey] = { amount: reward, timestamp: Date.now() };
+            // 3. Reset Target
+            up['users/'+uid+'/active_target'] = null;
+            // 4. Mark Request Paid
+            up['reward_requests/'+key+'/status'] = 'paid';
+            
+            db.ref().update(up).then(() => alert("Paid & Target Reset!"));
+        }
+
+        function openRejectModal(key, uid, cost) {
+            selectedRequestKey = key;
+            selectedUserUid = uid;
+            refundCost = cost || 0;
+            document.getElementById('rejectReason').value = "";
+            document.getElementById('rejectModal').style.display = 'flex';
+        }
+        function closeModal() { document.getElementById('rejectModal').style.display = 'none'; }
+
+        function confirmReject() {
+            const reason = document.getElementById('rejectReason').value.trim();
+            if(!reason) return alert("Enter reason");
+            const up = {};
+            up['target_requests/'+selectedRequestKey+'/status'] = 'rejected';
+            up['target_requests/'+selectedRequestKey+'/reason'] = reason;
+            up['users/'+selectedUserUid+'/credits'] = firebase.database.ServerValue.increment(refundCost);
+            up['users/'+selectedUserUid+'/last_rejection'] = reason;
+            up['users/'+selectedUserUid+'/rejection_seen'] = false;
+            db.ref().update(up).then(() => { alert("Rejected & Refunded."); closeModal(); });
+        }
+    </script>
+</body>
+</html>
