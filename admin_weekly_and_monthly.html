@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Credits & Packages</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #fff; font-family: 'Outfit', sans-serif; padding: 20px; }
+        .card { background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #334155; }
+        h2 { color: #00f2ff; margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        label { display: block; margin: 10px 0 5px; color: #94a3b8; font-size: 0.9rem; }
+        input { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 8px; box-sizing: border-box; }
+        
+        button { padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .btn-create { background: #00f2ff; color: #000; width: 100%; }
+        .btn-action { background: #f59e0b; color: #000; width: 100%; }
+        .btn-approve { background: #10b981; color: #fff; padding: 5px 10px; font-size: 0.8rem; margin-right: 5px; }
+        .btn-reject { background: #ef4444; color: #fff; padding: 5px 10px; font-size: 0.8rem; }
+        .btn-delete { background: #ef4444; color: #fff; padding: 5px 10px; float: right; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; border-bottom: 1px solid #334155; text-align: left; font-size: 0.9rem; }
+        th { color: #94a3b8; background: #0f172a; }
+        
+        .pack-item { background: #0f172a; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        .pack-info span { color: #00ff88; font-weight: bold; }
+        
+        .final-price-display { margin-top: 10px; font-size: 1.1rem; color: #00ff88; text-align: center; font-weight: bold; }
+        .code-active { color: #00ff88; font-family: monospace; font-size: 1rem; }
+    </style>
+</head>
+<body>
+
+    <h1>🛠️ Credit System & Packages</h1>
+
+    <!-- 1. WALLET SETTINGS -->
+    <div class="card">
+        <h2>⚙️ Wallet Settings</h2>
+        <label>Admin USDT (BEP20) Address:</label>
+        <input type="text" id="adminWallet" placeholder="0x...">
+        <button class="btn-create" onclick="saveWallet()">Save Wallet</button>
+    </div>
+
+    <!-- 2. GLOBAL FREE CREDITS (ADDED BACK) -->
+    <div class="card">
+        <h2>🎁 Global Free Credits</h2>
+        <p style="color:#aaa; font-size:0.9rem;">Give free credits to ALL Active Users (One Time Gift).</p>
+        <label>Amount of Credits:</label>
+        <input type="number" id="globalAmount" placeholder="e.g. 5">
+        <button class="btn-action" onclick="distributeFreeCredits()">Send to All Active Users</button>
+    </div>
+
+    <!-- 3. CREATE REDEEM CODE (ADDED BACK) -->
+    <div class="card">
+        <h2>🎟 Create Redeem Code</h2>
+        <div class="form-grid">
+            <div>
+                <label>Code Name:</label>
+                <input type="text" id="redeemName" placeholder="e.g. BONUS100">
+            </div>
+            <div>
+                <label>Credits Amount:</label>
+                <input type="number" id="redeemAmount" placeholder="e.g. 10">
+            </div>
+        </div>
+        <label>User Limit (Max Users):</label>
+        <input type="number" id="redeemLimit" placeholder="e.g. 50">
+        
+        <button class="btn-create" onclick="createRedeemCode()">Create Code</button>
+
+        <!-- Active Codes List -->
+        <h3 style="margin-top:20px; border-bottom:1px solid #334155; padding-bottom:5px;">Active Codes</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Amount</th>
+                    <th>Usage</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="redeemTable"><tr><td colspan="4">Loading...</td></tr></tbody>
+        </table>
+    </div>
+
+    <!-- 4. CREATE DISCOUNT PACKAGE -->
+    <div class="card">
+        <h2>📦 Create Credit Package</h2>
+        <div class="form-grid">
+            <div>
+                <label>Credits Amount:</label>
+                <input type="number" id="packCredits" placeholder="e.g. 10" oninput="calcFinal()">
+            </div>
+            <div>
+                <label>Original Price ($):</label>
+                <input type="number" id="packOrigPrice" placeholder="e.g. 10" oninput="calcFinal()">
+            </div>
+        </div>
+        <label>Discount Percentage (%):</label>
+        <input type="number" id="packDiscount" placeholder="e.g. 90" oninput="calcFinal()">
+        
+        <div class="final-price-display">Final Price: $<span id="finalPriceDisplay">0.00</span></div>
+        
+        <button class="btn-create" onclick="createPackage()">Add Package Option</button>
+
+        <!-- Active Packages List -->
+        <h3 style="margin-top:20px; border-bottom:1px solid #334155; padding-bottom:5px;">Active Packages</h3>
+        <div id="packageList">Loading...</div>
+    </div>
+
+    <!-- 5. PENDING ORDERS -->
+    <div class="card">
+        <h2>⏳ Pending Buy Orders</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>User UID</th>
+                    <th>Package</th>
+                    <th>Details (Sender & Trx)</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="orderTable">
+                <tr><td colspan="4">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 1. WALLET SETTINGS ---
+        db.ref('settings/credits/wallet').on('value', snap => {
+            document.getElementById('adminWallet').value = snap.val() || "";
+        });
+        function saveWallet() {
+            db.ref('settings/credits/wallet').set(document.getElementById('adminWallet').value);
+            alert("Wallet Saved!");
+        }
+
+        // --- 2. GLOBAL FREE CREDITS ---
+        function distributeFreeCredits() {
+            const amt = parseFloat(document.getElementById('globalAmount').value);
+            if(!amt || amt <= 0) return alert("Enter valid amount");
+
+            if(confirm(`Are you sure you want to give ${amt} credits to ALL active users?`)) {
+                db.ref('users').once('value', snap => {
+                    let updates = {};
+                    let count = 0;
+                    snap.forEach(child => {
+                        const user = child.val();
+                        if(user.status === 'active') {
+                            const currentCredit = parseFloat(user.credits || 0);
+                            updates[`users/${child.key}/credits`] = currentCredit + amt;
+                            count++;
+                        }
+                    });
+                    if(count > 0) {
+                        db.ref().update(updates).then(() => alert(`Sent ${amt} credits to ${count} users.`));
+                    } else {
+                        alert("No active users found.");
+                    }
+                });
+            }
+        }
+
+        // --- 3. REDEEM CODE MANAGEMENT ---
+        function createRedeemCode() {
+            const code = document.getElementById('redeemName').value.trim();
+            const amt = parseFloat(document.getElementById('redeemAmount').value);
+            const limit = parseInt(document.getElementById('redeemLimit').value);
+
+            if(!code || !amt || !limit) return alert("Fill all fields");
+
+            db.ref('redeem_codes/' + code).set({
+                amount: amt, limit: limit, used: 0, status: 'active'
+            }).then(() => {
+                alert("Redeem Code Created!");
+                document.getElementById('redeemName').value = "";
+                document.getElementById('redeemAmount').value = "";
+                document.getElementById('redeemLimit').value = "";
+            });
+        }
+
+        db.ref('redeem_codes').on('value', snap => {
+            const list = document.getElementById('redeemTable');
+            list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<tr><td colspan='4'>No active codes</td></tr>"; return; }
+
+            snap.forEach(child => {
+                const data = child.val();
+                if(data.status === 'active') {
+                    list.innerHTML += `
+                        <tr>
+                            <td class="code-active">${child.key}</td>
+                            <td>${data.amount}</td>
+                            <td>${data.used} / ${data.limit}</td>
+                            <td><button class="btn-delete" onclick="if(confirm('Delete?')) db.ref('redeem_codes/${child.key}').remove()">Delete</button></td>
+                        </tr>
+                    `;
+                }
+            });
+        });
+
+        // --- 4. PACKAGE MANAGEMENT ---
+        function calcFinal() {
+            const price = parseFloat(document.getElementById('packOrigPrice').value) || 0;
+            const disc = parseFloat(document.getElementById('packDiscount').value) || 0;
+            const final = price - (price * (disc / 100));
+            document.getElementById('finalPriceDisplay').innerText = final.toFixed(2);
+        }
+
+        function createPackage() {
+            const credits = parseFloat(document.getElementById('packCredits').value);
+            const origPrice = parseFloat(document.getElementById('packOrigPrice').value);
+            const discount = parseFloat(document.getElementById('packDiscount').value);
+            if(!credits || !origPrice) return alert("Enter details");
+
+            const finalPrice = origPrice - (origPrice * (discount / 100));
+            db.ref('settings/credit_packages').push({
+                credits: credits, originalPrice: origPrice, discount: discount, finalPrice: finalPrice.toFixed(2)
+            });
+            alert("Package Created!");
+        }
+
+        db.ref('settings/credit_packages').on('value', snap => {
+            const list = document.getElementById('packageList');
+            list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<p>No packages created.</p>"; return; }
+
+            snap.forEach(child => {
+                const p = child.val();
+                list.innerHTML += `
+                    <div class="pack-item">
+                        <div class="pack-info">
+                            <span>${p.credits} Credits</span> for <span>$${p.finalPrice}</span> 
+                            <small style="color:#aaa; margin-left:10px;">(Was $${p.originalPrice} - ${p.discount}% OFF)</small>
+                        </div>
+                        <button class="btn-delete" onclick="db.ref('settings/credit_packages/${child.key}').remove()">Delete</button>
+                    </div>
+                `;
+            });
+        });
+
+        // --- 5. ORDER MANAGEMENT ---
+        db.ref('credit_orders').orderByChild('status').equalTo('pending').on('value', snap => {
+            const list = document.getElementById('orderTable');
+            list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<tr><td colspan='4'>No pending orders</td></tr>"; return; }
+
+            snap.forEach(child => {
+                const o = child.val();
+                list.innerHTML += `
+                    <tr>
+                        <td><small>${o.uid}</small></td>
+                        <td>${o.credits} Credits<br><span style="color:#00ff88">$${o.price}</span></td>
+                        <td>
+                            From: <span style="color:#f59e0b">${o.sender}</span><br>
+                            Trx: <small>${o.trx}</small>
+                        </td>
+                        <td>
+                            <button class="btn-approve" onclick="processOrder('${child.key}', '${o.uid}', ${o.credits}, 'approved')">Accept</button>
+                            <button class="btn-reject" onclick="processOrder('${child.key}', '${o.uid}', 0, 'rejected')">Reject</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+
+        function processOrder(key, uid, credits, status) {
+            if(status === 'approved') {
+                db.ref('users/' + uid + '/credits').transaction(c => (c || 0) + credits);
+                alert("Order Accepted! Credits Added.");
+            } else {
+                alert("Order Rejected.");
+            }
+            db.ref('credit_orders/' + key).update({ status: status });
+        }
+    </script>
+</body>
+</html>
