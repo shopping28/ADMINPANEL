@@ -3,41 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <title>Admin | Manage Withdraws</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
+        /* === PREMIUM ADMIN THEME === */
+        :root {
+            --bg: #0f0c29; --card: #1b1b2f; --border: #333;
+            --gold: #f1c40f; --green: #00f260; --red: #ff4757;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
         
-        .header { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
-        a { color: #ccc; text-decoration: none; background: #333; padding: 5px 10px; border-radius: 5px; }
+        body { background: var(--bg); color: white; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding-bottom: 50px; }
 
-        .card { background: #1a1a2e; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #333; border-left: 5px solid #3498db; }
-        .row { display: flex; justify-content: space-between; font-weight: bold; }
-        .wallet { background: #222; padding: 5px; font-family: monospace; font-size: 0.9rem; word-break: break-all; margin: 10px 0; color: #ccc; }
+        /* HEADER */
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 25px; }
+        .back-btn { background: #222; color: #ccc; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; transition: 0.3s; }
+        .back-btn:hover { background: #333; color: white; }
+
+        /* CARDS */
+        .settings-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .card-title { color: var(--gold); font-size: 1.1rem; margin-bottom: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
         
-        button { padding: 8px 15px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; margin-right: 5px; }
-        .app { background: #00f260; color: black; }
-        .rej { background: #ff4757; color: white; }
-        .chk { background: #444; color: white; width: 100%; margin-bottom: 5px; }
+        .input-row { display: flex; gap: 10px; margin-bottom: 5px; }
+        input { flex: 1; padding: 12px; background: #0b0b15; border: 1px solid #444; color: white; border-radius: 8px; outline: none; }
+        .btn-action { background: var(--gold); color: black; border: none; padding: 0 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-action:hover { opacity: 0.9; }
         
-        .info { background: black; padding: 10px; margin-bottom: 5px; display: none; font-size: 0.9rem; }
+        /* METHOD LIST */
+        .method-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .method-tag { background: #333; padding: 8px 15px; border-radius: 20px; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; border: 1px solid #444; }
+        .del-btn { color: var(--red); cursor: pointer; font-size: 1rem; }
+
+        /* REQUEST LIST */
+        .req-card { background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-left: 5px solid #3498db; animation: slideIn 0.3s; }
+        @keyframes slideIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+        
+        .req-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .m-badge { background: rgba(52, 152, 219, 0.15); color: #3498db; padding: 4px 10px; border-radius: 5px; font-weight: 600; font-size: 0.85rem; }
+        .amt { font-size: 1.3rem; font-weight: 700; color: var(--green); }
+        
+        .wallet-box { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; font-family: monospace; color: #ddd; margin-bottom: 10px; word-break: break-all; }
+        
+        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        button { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-user { background: #34495e; color: white; width: 100%; margin-bottom: 5px; }
+        .btn-app { background: var(--green); color: black; }
+        .btn-rej { background: var(--red); color: white; }
+
+        .user-info { display: none; background: #000; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.9rem; border: 1px solid #333; }
+        
+        .limit-display { margin-top: 10px; font-size: 0.9rem; color: #aaa; }
+        .limit-display span { color: var(--green); font-weight: bold; font-size: 1rem; }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <!-- HEADER -->
         <div class="header">
-            <h3>Pending Withdrawals</h3>
-            <a href="admin_dashboard.html">Dashboard</a>
+            <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <h2>Manage Withdrawals</h2>
         </div>
 
-        <div id="list">
-            <div style="text-align:center; padding:50px;">Loading...</div>
+        <!-- 1. GENERAL SETTINGS (MIN LIMIT) -->
+        <div class="settings-card">
+            <div class="card-title"><i class="fas fa-cog"></i> General Settings</div>
+            <div class="input-row">
+                <input type="number" id="minAmountInput" placeholder="Set Minimum Withdraw Amount (e.g. 5)">
+                <button class="btn-action" onclick="updateMinLimit()">UPDATE LIMIT</button>
+            </div>
+            <div class="limit-display">Current Minimum Limit: $<span id="currentLimit">...</span></div>
+        </div>
+
+        <!-- 2. PAYMENT METHOD MANAGER -->
+        <div class="settings-card">
+            <div class="card-title"><i class="fas fa-wallet"></i> Payment Methods</div>
+            <div class="input-row">
+                <input type="text" id="newMethod" placeholder="Ex: USDT (BEP20), Bkash, Nagad...">
+                <button class="btn-action" onclick="addMethod()">+ ADD METHOD</button>
+            </div>
+            <div class="method-list" id="methodList">
+                <span style="color:#666; font-size:0.9rem;">Loading methods...</span>
+            </div>
+        </div>
+
+        <!-- 3. PENDING REQUESTS -->
+        <h4 style="color:#888; margin-bottom:15px; text-transform:uppercase; border-bottom: 1px solid #333; padding-bottom: 10px;">Pending Approvals</h4>
+        <div id="reqList">
+            <div style="text-align:center; padding:40px; color:#555;">Loading Requests...</div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -47,64 +108,102 @@
         const db = firebase.database();
         const RATE = 120;
 
-        // পেন্ডিং রিকোয়েস্ট লোড করা (ফাস্ট লোডিংয়ের জন্য limitToLast ব্যবহার করা হয়েছে)
-        db.ref('withdraw_requests').orderByChild('status').equalTo('pending').limitToLast(50).on('value', snap => {
-            const list = document.getElementById('list'); list.innerHTML = "";
+        // === 1. MANAGE MINIMUM WITHDRAW LIMIT ===
+        
+        // Load current limit
+        db.ref('settings/withdraw_limit').on('value', snap => {
+            const limit = snap.val() || 5; // Default 5 if not set
+            document.getElementById('currentLimit').innerText = limit;
+            document.getElementById('minAmountInput').value = limit;
+        });
+
+        // Update Limit Function
+        function updateMinLimit() {
+            const amount = parseFloat(document.getElementById('minAmountInput').value);
+            if(!amount || amount < 0) return alert("Please enter a valid amount!");
             
-            if(!snap.exists()) { list.innerHTML = "<p style='text-align:center'>No Pending Requests</p>"; return; }
+            db.ref('settings/withdraw_limit').set(amount)
+              .then(() => alert("Minimum Withdraw Limit Updated Successfully!"));
+        }
+
+        // === 2. MANAGE METHODS ===
+        function addMethod() {
+            const name = document.getElementById('newMethod').value.trim();
+            if(!name) return alert("Please enter a method name!");
+            db.ref('settings/payment_methods').push({ name: name });
+            document.getElementById('newMethod').value = "";
+        }
+
+        function deleteMethod(key) {
+            if(confirm("Delete this method?")) {
+                db.ref('settings/payment_methods/'+key).remove();
+            }
+        }
+
+        // Load Methods
+        db.ref('settings/payment_methods').on('value', snap => {
+            const list = document.getElementById('methodList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<small style='color:#555'>No methods added yet.</small>"; return; }
+            
+            snap.forEach(c => {
+                const m = c.val();
+                list.innerHTML += `
+                    <div class="method-tag">
+                        ${m.name}
+                        <i class="fas fa-times del-btn" onclick="deleteMethod('${c.key}')"></i>
+                    </div>`;
+            });
+        });
+
+        // === 3. LOAD REQUESTS ===
+        db.ref('withdraw_requests').orderByChild('status').equalTo('pending').limitToLast(50).on('value', snap => {
+            const list = document.getElementById('reqList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<p style='text-align:center; color:#555'>No pending requests</p>"; return; }
 
             snap.forEach(c => {
                 const r = c.val();
                 const k = c.key;
-                let refAmt = r.amountBDT || r.amount; // কত টাকা রিফান্ড করতে হবে
+                let refAmt = r.amountBDT || r.amount;
+                let usd = r.amountUSDT ? r.amountUSDT.toFixed(2) : (r.amount/RATE).toFixed(2);
 
-                list.insertAdjacentHTML('afterbegin', `
-                    <div class="card">
-                        <div class="row">
-                            <span style="color:#3498db">${r.method}</span>
-                            <span style="color:#00f260">$${r.amountUSDT}</span>
+                const html = `
+                    <div class="req-card">
+                        <div class="req-head">
+                            <span class="m-badge">${r.method}</span>
+                            <span class="amt">$${usd}</span>
                         </div>
-                        <div class="wallet">To: ${r.wallet}</div>
+                        <div class="wallet-box">To: ${r.wallet}</div>
                         
-                        <div id="u-${k}" class="info">Loading...</div>
-                        <button class="chk" onclick="viewUser('${r.uid}', '${k}')">Check User Info</button>
+                        <div id="u-${k}" class="user-info">Loading...</div>
+                        <button class="btn-user" onclick="userInfo('${r.uid}', '${k}')">Check User Info</button>
 
-                        <div>
-                            <button class="app" onclick="act('${k}', 'app', 0, '${r.uid}')">Approve</button>
-                            <button class="rej" onclick="act('${k}', 'rej', ${refAmt}, '${r.uid}')">Reject & Refund</button>
+                        <div class="btn-group">
+                            <button class="btn-app" onclick="act('${k}', 'app', 0, '${r.uid}')">Approve</button>
+                            <button class="btn-rej" onclick="act('${k}', 'rej', ${refAmt}, '${r.uid}')">Reject & Refund</button>
                         </div>
-                    </div>
-                `);
+                    </div>`;
+                list.insertAdjacentHTML('afterbegin', html);
             });
         });
 
-        // ইউজার ইনফো দেখার জন্য
-        function viewUser(uid, k) {
-            const el = document.getElementById('u-'+k);
-            if(el.style.display=='block') { el.style.display='none'; return; }
-            el.style.display='block';
+        function userInfo(uid, k) {
+            const d = document.getElementById('u-'+k);
+            if(d.style.display=='block') { d.style.display='none'; return; }
+            d.style.display='block';
             db.ref('users/'+uid).once('value', s => {
                 const u = s.val() || {};
                 const b = (parseFloat(u.balance||0)/RATE).toFixed(2);
-                el.innerHTML = `Name: ${u.firstName} <br> Phone: ${u.phone} <br> Pass: ${u.password} <br> Balance: $${b}`;
+                d.innerHTML = `Name: ${u.firstName} <br> Phone: ${u.phone} <br> Pass: <span style="color:#f1c40f">${u.password}</span> <br> Bal: $${b}`;
             });
         }
 
-        // অ্যাকশন (Approve / Reject)
         function act(key, type, amt, uid) {
-            if(type === 'app') {
-                if(confirm("Confirm Approve?")) {
-                    db.ref('withdraw_requests/'+key).update({status:'approved', processed: Date.now()});
-                }
+            if(type=='app'){
+                if(confirm("Approve Payment?")) db.ref('withdraw_requests/'+key).update({status:'approved', processed:Date.now()});
             } else {
                 if(confirm("Reject & Refund?")) {
-                    // ১. টাকা ফেরত দেওয়া
-                    db.ref('users/'+uid+'/balance').transaction(c => (c||0) + amt)
-                    .then(() => {
-                        // ২. রিকোয়েস্ট রিজেক্ট করা
-                        db.ref('withdraw_requests/'+key).update({status:'rejected', processed: Date.now()});
-                        alert("Refunded & Rejected");
-                    });
+                    db.ref('users/'+uid+'/balance').transaction(c=>(c||0)+amt)
+                    .then(() => db.ref('withdraw_requests/'+key).update({status:'rejected', processed:Date.now()}));
                 }
             }
         }
