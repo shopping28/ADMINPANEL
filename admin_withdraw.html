@@ -2,101 +2,243 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Withdrawals</title>
+    <title>Manage Withdrawals</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
-        .card { background: #1a1a2e; padding: 20px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #333; border-left: 5px solid #3498db; }
-        button { padding: 10px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-right: 10px; transition: 0.2s; }
-        button:active { transform: scale(0.95); }
-        .app { background: #00f260; } .rej { background: #e74c3c; color: white; }
-        .det-btn { background: #3498db; color: white; width: 100%; margin-bottom: 10px; }
-        .details { display: none; background: #000; padding: 10px; margin-bottom: 10px; font-size: 0.9rem; border-radius: 5px; }
+        
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        .header { display: flex; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .back-btn { color: #aaa; text-decoration: none; font-size: 1.1rem; margin-right: 15px; transition: 0.3s; }
+        .back-btn:hover { color: #fff; }
 
-        /* Toast CSS */
-        #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
-        .toast {
-            background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3); border-left: 5px solid #00f260;
-            display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards;
+        /* SETTINGS CARD */
+        .settings-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px; border-radius: 12px; margin-bottom: 25px;
+            border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
+        .settings-title { color: #f1c40f; margin-bottom: 15px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        
+        .input-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .input-group { flex: 1; }
+        .input-group label { display: block; font-size: 0.85rem; color: #ccc; margin-bottom: 5px; }
+        
+        input { 
+            width: 100%; padding: 12px; background: #0f0c29; border: 1px solid #444; 
+            color: white; border-radius: 8px; box-sizing: border-box; outline: none; 
+        }
+        input:focus { border-color: #3498db; }
+
+        .btn-save { background: #f1c40f; color: black; width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+        /* REQUEST CARDS */
+        .req-card { 
+            background: #1a1a2e; padding: 20px; border-radius: 12px; 
+            margin-bottom: 15px; border: 1px solid #333; border-left: 5px solid #3498db; 
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+        .req-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .amount-badge { font-size: 1.4rem; font-weight: bold; color: #00f260; }
+        .method-badge { background: rgba(52, 152, 219, 0.1); color: #3498db; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; }
+
+        .wallet-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; font-family: monospace; color: #ccc; margin-bottom: 10px; word-break: break-all; border: 1px dashed #444; }
+
+        /* User Details Box */
+        .user-details {
+            background: #12121a; padding: 15px; border-radius: 8px; 
+            margin-bottom: 15px; display: none; font-size: 0.9rem;
+            border: 1px solid #333;
+        }
+        .info-row { display: flex; justify-content: space-between; border-bottom: 1px solid #222; padding: 5px 0; }
+        .info-row:last-child { border-bottom: none; }
+
+        /* Actions */
+        .action-row { display: flex; gap: 10px; }
+        button { padding: 10px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        
+        .btn-view { background: #34495e; color: white; margin-bottom: 10px; width: 100%; }
+        .btn-app { background: #00f260; color: #000; }
+        .btn-rej { background: #e74c3c; color: white; }
+
+        /* Toast */
+        #toast-box { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { background: #1e1e2f; color: white; min-width: 250px; padding: 15px 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); border-left: 5px solid #00f260; display: flex; align-items: center; gap: 15px; animation: slideIn 0.3s ease-out forwards; }
         .toast.error { border-left-color: #e74c3c; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
     </style>
 </head>
 <body>
+
     <div id="toast-box"></div>
-    <a href="admin_dashboard.html" style="color:#aaa;">← Back</a>
-    <h2>Withdraw Requests</h2>
-    
-    <div style="background:#222; padding:15px; margin-bottom:20px; border-radius:10px;">
-        <input type="number" id="minAmt" placeholder="Min Taka" style="padding:5px;">
-        <input type="number" id="minRef" placeholder="Min Ref" style="padding:5px;">
-        <button onclick="saveRules()" style="background:#f1c40f;">Set Rules</button>
+
+    <div class="container">
+        <div class="header">
+            <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+            <h2>Withdraw Requests</h2>
+        </div>
+
+        <!-- 1. SETTINGS CARD -->
+        <div class="settings-card">
+            <div class="settings-title"><i class="fas fa-cog"></i> Withdraw Rules Setup</div>
+            
+            <div class="input-row">
+                <div class="input-group">
+                    <label>Min Withdraw Amount ($)</label>
+                    <input type="number" id="minAmt" placeholder="e.g. 5">
+                </div>
+                <div class="input-group">
+                    <label>Min Active Referrals</label>
+                    <input type="number" id="minRef" placeholder="e.g. 2">
+                </div>
+            </div>
+            
+            <button class="btn-save" onclick="saveRules()">Update Rules</button>
+        </div>
+
+        <!-- 2. REQUEST LIST -->
+        <h3 style="color:#aaa; font-size:1rem; margin-bottom:15px;">Pending Approvals</h3>
+        <div id="list">
+            <div style="text-align:center; padding:20px; color:#555;">Loading requests...</div>
+        </div>
     </div>
 
-    <div id="list">Loading...</div>
-
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
         const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const RATE = 120; // 1 USD = 120 BDT
 
         // TOAST FUNCTION
         function showToast(msg, type = 'success') {
             const box = document.getElementById('toast-box');
             const t = document.createElement('div');
             t.className = `toast ${type}`;
-            t.innerHTML = type === 'success' ? `✅ ${msg}` : `❌ ${msg}`;
+            t.innerHTML = type === 'success' ? `<i class="fas fa-check"></i> ${msg}` : `<i class="fas fa-times"></i> ${msg}`;
             box.appendChild(t);
             setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300) }, 3000);
         }
 
+        // === 1. LOAD SETTINGS ===
         db.ref('settings/withdraw_rules').on('value', s => {
-            if(s.val()) { document.getElementById('minAmt').value = s.val().minAmount; document.getElementById('minRef').value = s.val().minReferrals; }
+            const d = s.val();
+            if(d) { 
+                document.getElementById('minAmt').value = d.minAmount || ''; 
+                document.getElementById('minRef').value = d.minReferrals || ''; 
+            }
         });
         
         function saveRules() { 
-            db.ref('settings/withdraw_rules').set({ minAmount: Number(document.getElementById('minAmt').value), minReferrals: Number(document.getElementById('minRef').value) }); 
-            showToast("Rules Saved!", "success"); 
+            const amt = Number(document.getElementById('minAmt').value);
+            const ref = Number(document.getElementById('minRef').value);
+            
+            db.ref('settings/withdraw_rules').set({ minAmount: amt, minReferrals: ref })
+              .then(() => showToast("Withdraw Rules Updated!")); 
         }
 
+        // === 2. LOAD REQUESTS ===
         db.ref('withdraw_requests').orderByChild('status').equalTo('pending').on('value', snap => {
             const list = document.getElementById('list'); list.innerHTML = "";
-            if(!snap.exists()) { list.innerHTML = "No requests."; return; }
+            if(!snap.exists()) { list.innerHTML = "<p style='text-align:center; color:#555;'>No pending requests.</p>"; return; }
+            
             snap.forEach(c => {
                 const r = c.val();
-                list.innerHTML += `
-                    <div class="card">
-                        <p>${r.method} - ${r.wallet} - <b style="color:#00f260">৳${r.amount}</b></p>
-                        <button class="det-btn" onclick="viewUser('${r.uid}', '${c.key}')">View User Info</button>
-                        <div id="d-${c.key}" class="details">Loading...</div>
-                        <button class="app" onclick="proc('${c.key}', 'approved', 0, '')">Approve</button>
-                        <button class="rej" onclick="proc('${c.key}', 'rejected', ${r.amount}, '${r.uid}')">Reject (Refund)</button>
+                // Amount logic: stored likely in BDT or USD. Assuming BDT for deduction compatibility.
+                // We show USD for Admin clarity.
+                let showAmount = "0.00";
+                let rawAmount = parseFloat(r.amountBDT || r.amount); // Support both
+                if(rawAmount) showAmount = (rawAmount / RATE).toFixed(2);
+
+                const html = `
+                    <div class="req-card" id="card-${c.key}">
+                        <div class="req-header">
+                            <div>
+                                <span class="method-badge">${r.method}</span>
+                                <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">Req ID: ...${c.key.substr(-5)}</div>
+                            </div>
+                            <div class="amount-badge">$${showAmount}</div>
+                        </div>
+
+                        <div class="wallet-box">
+                            <span style="color:#f1c40f; font-size:0.75rem;">TO:</span> ${r.wallet}
+                        </div>
+
+                        <!-- Hidden User Details -->
+                        <div id="details-${c.key}" class="user-details">Loading user info...</div>
+
+                        <button class="btn-view" onclick="toggleUserInfo('${r.uid}', '${c.key}')">
+                            <i class="fas fa-user"></i> Check User Details
+                        </button>
+
+                        <div class="action-row">
+                            <button class="btn-app" onclick="processReq('${c.key}', 'approved', 0, '${r.uid}')">
+                                APPROVE <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-rej" onclick="processReq('${c.key}', 'rejected', ${rawAmount}, '${r.uid}')">
+                                REJECT & REFUND
+                            </button>
+                        </div>
                     </div>`;
+                list.innerHTML += html;
             });
         });
 
-        async function viewUser(uid, key) {
-            const d = document.getElementById('d-'+key);
-            d.style.display = 'block';
-            const u = (await db.ref('users/'+uid).once('value')).val();
-            d.innerHTML = `Name: ${u.firstName}<br>Pass: ${u.password}<br>Phone: ${u.phone}<br>Bal: ${u.balance}`;
+        // VIEW USER INFO
+        async function toggleUserInfo(uid, key) {
+            const div = document.getElementById('details-'+key);
+            if(div.style.display === 'block') {
+                div.style.display = 'none';
+                return;
+            }
+            
+            div.style.display = 'block';
+            const snap = await db.ref('users/'+uid).once('value');
+            const u = snap.val();
+            
+            if(!u) { div.innerHTML = "User not found"; return; }
+
+            const balanceUSD = (parseFloat(u.balance || 0) / RATE).toFixed(2);
+
+            div.innerHTML = `
+                <div class="info-row"><span>Name:</span> <b style="color:white">${u.firstName}</b></div>
+                <div class="info-row"><span>Phone:</span> <b>${u.phone}</b></div>
+                <div class="info-row"><span>Password:</span> <b style="color:#f1c40f">${u.password}</b></div>
+                <div class="info-row"><span>Current Bal:</span> <b style="color:#00f260">$${balanceUSD}</b></div>
+            `;
         }
 
-        function proc(key, st, amt, uid) {
-            if(st === 'rejected') {
-                if(confirm("Reject and refund balance?")) {
-                    db.ref('users/'+uid+'/balance').transaction(c => (c||0)+amt);
-                    db.ref('withdraw_requests/'+key).update({status: st});
-                    showToast("Rejected & Refunded", "error");
+        // APPROVE / REJECT LOGIC
+        function processReq(key, status, amountToRefund, uid) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+
+            if(status === 'rejected') {
+                if(confirm("Are you sure you want to REJECT? Money will be refunded.")) {
+                    // 1. Refund Money (BDT)
+                    db.ref('users/'+uid+'/balance').transaction(current => (current || 0) + amountToRefund)
+                    .then(() => {
+                        // 2. Update Request Status
+                        db.ref('withdraw_requests/'+key).update({status: 'rejected'});
+                        showToast("Rejected & Refunded Successfully", "error");
+                    });
+                } else {
+                    btn.disabled = false; btn.innerText = "REJECT & REFUND";
                 }
             } else {
-                if(confirm("Confirm Approve?")) {
-                    db.ref('withdraw_requests/'+key).update({status: st});
+                if(confirm("Confirm PAYMENT Sent?")) {
+                    db.ref('withdraw_requests/'+key).update({status: 'approved'});
                     showToast("Withdraw Approved!", "success");
+                } else {
+                    btn.disabled = false; btn.innerText = "APPROVE";
                 }
             }
         }
