@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Settings</title>
+    <title>Commission Settings</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -13,7 +13,6 @@
         
         .card { background: #1a1a2e; padding: 25px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #333; }
         .card h3 { margin-top: 0; color: #fff; display: flex; align-items: center; gap: 10px; }
-        
         .note { font-size: 0.8rem; color: #f39c12; display: block; margin-bottom: 15px; }
         
         label { display: block; color: #ccc; font-size: 0.85rem; margin-bottom: 5px; }
@@ -22,17 +21,12 @@
         button { padding: 10px 20px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn-add { background: #3498db; color: white; }
         .btn-save { background: #00f260; color: black; width: 100%; margin-top: 10px; }
-        .btn-del { background: #ff4757; color: white; padding: 5px 10px; font-size: 0.8rem; }
+        .btn-del { background: #ff4757; color: white; padding: 5px 10px; font-size: 0.8rem; border: none; border-radius: 4px; cursor: pointer; }
         
         /* Lists */
         .list-box { margin-top: 15px; }
-        .row-item { display: flex; gap: 10px; align-items: flex-end; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; }
+        .row-item { display: flex; gap: 10px; align-items: flex-end; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); }
         .flex-grow { flex: 1; }
-        .row-info { flex: 1; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
-        
-        /* Flex Input Row */
-        .flex-inputs { display: flex; gap: 10px; align-items: flex-end; }
-        .flex-inputs div { flex: 1; }
     </style>
 </head>
 <body>
@@ -50,10 +44,10 @@
             <button class="btn-save" onclick="saveFee()">Save Fee</button>
         </div>
 
-        <!-- 2. DYNAMIC COMMISSIONS -->
+        <!-- 2. MULTI-LEVEL COMMISSION -->
         <div class="card">
-            <h3 style="color:#3498db;"><i class="fas fa-network-wired"></i> Dynamic Commissions</h3>
-            <span class="note">Add levels as needed. Input in ($), saves as BDT (x120).</span>
+            <h3 style="color:#3498db;"><i class="fas fa-network-wired"></i> Referral Commissions</h3>
+            <span class="note">Set commissions for Level 1 (Direct), Level 2 (Downline), etc. <br>Input in Dollar ($). System saves as BDT (x120).</span>
             
             <div id="commissionList" class="list-box"></div>
             
@@ -61,24 +55,7 @@
                 <button class="btn-add" onclick="addCommLevel()"><i class="fas fa-plus"></i> Add Next Level</button>
             </div>
             
-            <button class="btn-save" style="background:#3498db; color:white;" onclick="saveCommissions()">Update All Commissions</button>
-        </div>
-
-        <!-- 3. VIP LEVEL SETUP (RESTORED) -->
-        <div class="card">
-            <h3 style="color:#f39c12;"><i class="fas fa-crown"></i> VIP Level Setup</h3>
-            <span class="note">Set Targets & Bonuses. Input Bonus in ($), saves as BDT.</span>
-
-            <div class="flex-inputs">
-                <div><label>Level #</label><input type="number" id="vipLvl" placeholder="1"></div>
-                <div><label>Target Active</label><input type="number" id="vipTarget" placeholder="10"></div>
-                <div><label>Bonus ($)</label><input type="number" id="vipBonus" placeholder="e.g. 5"></div>
-                <button class="btn-add" style="background:#f39c12; margin-bottom:10px;" onclick="addVipLevel()">Add</button>
-            </div>
-
-            <div id="vipList" class="list-box"></div>
-            
-            <button class="btn-save" style="background:#f39c12; color:black;" onclick="saveVipSettings()">Save VIP List</button>
+            <button class="btn-save" style="background:#3498db; color:white;" onclick="saveCommissions()">Update Commission Plan</button>
         </div>
 
     </div>
@@ -86,7 +63,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
-        // UPDATED FIREBASE CONFIGURATION
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
             authDomain: "shopping28-84906.firebaseapp.com",
@@ -96,65 +73,48 @@
             messagingSenderId: "252107906792",
             appId: "1:252107906792:web:d39b0be25c88e07015b35d"
         };
-        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const RATE = 120; // 1 USD = 120 BDT
 
         let commLevels = [];
-        let vipLevels = [];
 
-        // === LOAD ALL DATA ===
+        // LOAD SETTINGS
         db.ref('settings').once('value', (snap) => {
             const d = snap.val() || {};
-
-            // 1. Payment
             if(d.payment) document.getElementById('actFee').value = d.payment.fee || '';
 
-            // 2. Commissions (Dynamic)
-            if(d.commissions_dynamic) {
-                commLevels = d.commissions_dynamic;
-            } else if(d.commissions) {
-                // Fallback for old data
-                commLevels = [
-                    { level: 1, amount: d.commissions.level1 },
-                    { level: 2, amount: d.commissions.level2 },
-                    { level: 3, amount: d.commissions.level3 }
-                ];
+            // Load Referral Levels
+            if(d.referral_levels) {
+                commLevels = d.referral_levels;
+            } else {
+                commLevels = [{ level: 1, amount: 0 }]; // Default Level 1
             }
             renderCommList();
-
-            // 3. VIP Levels
-            if(d.vip_levels) {
-                vipLevels = Array.isArray(d.vip_levels) ? d.vip_levels : Object.values(d.vip_levels);
-                vipLevels = vipLevels.filter(n => n); // remove nulls
-                renderVipList();
-            }
         });
 
-        // ==========================================
-        // 1. PAYMENT LOGIC
-        // ==========================================
+        // PAYMENT LOGIC
         function saveFee() {
             db.ref('settings/payment/fee').set(Number(document.getElementById('actFee').value))
               .then(() => alert("Activation Fee Saved!"));
         }
 
-        // ==========================================
-        // 2. DYNAMIC COMMISSION LOGIC
-        // ==========================================
+        // COMMISSION LOGIC
         function renderCommList() {
             const div = document.getElementById('commissionList');
             div.innerHTML = "";
             commLevels.forEach((item, index) => {
-                // Convert BDT to USD for display
+                // Display in USD
                 const usdVal = (item.amount / RATE).toFixed(2);
+                
                 div.innerHTML += `
                 <div class="row-item">
-                    <div style="width:80px; font-weight:bold; color:#3498db;">Level ${index + 1}</div>
+                    <div style="width:100px; font-weight:bold; color:${index===0?'#00f260':'#ccc'};">
+                        ${index===0 ? 'Level 1 (Direct)' : 'Level ' + (index + 1)}
+                    </div>
                     <div class="flex-grow">
-                        <label>Bonus ($)</label>
-                        <input type="number" step="0.01" value="${usdVal}" id="comm-input-${index}">
+                        <label>Commission ($)</label>
+                        <input type="number" step="0.01" value="${usdVal}" id="comm-input-${index}" placeholder="0.00">
                     </div>
                     <button class="btn-del" onclick="removeCommLevel(${index})"><i class="fas fa-trash"></i></button>
                 </div>`;
@@ -168,86 +128,24 @@
 
         function removeCommLevel(index) {
             commLevels.splice(index, 1);
-            // Re-assign level numbers
+            // Re-index levels
             commLevels.forEach((item, i) => item.level = i + 1);
             renderCommList();
         }
 
         function saveCommissions() {
-            // Read all inputs, convert USD to BDT, then save
+            // Save as BDT to Database
             const updatedLevels = commLevels.map((item, index) => {
                 const usdVal = document.getElementById(`comm-input-${index}`).value;
                 return {
                     level: index + 1,
-                    amount: parseFloat(usdVal) * RATE // Convert to BDT
+                    amount: parseFloat(usdVal) * RATE // Save as BDT
                 };
             });
 
-            db.ref('settings/commissions_dynamic').set(updatedLevels)
-              .then(() => alert("Commission Structure Updated!"));
+            db.ref('settings/referral_levels').set(updatedLevels)
+              .then(() => alert("Commission Plan Updated Successfully!"));
         }
-
-        // ==========================================
-        // 3. VIP LEVEL LOGIC (RESTORED)
-        // ==========================================
-        function addVipLevel() {
-            const lvl = document.getElementById('vipLvl').value;
-            const target = document.getElementById('vipTarget').value;
-            const bonusUSD = document.getElementById('vipBonus').value;
-
-            if(!lvl || !target || !bonusUSD) return alert("Fill all VIP fields");
-
-            // Convert Bonus USD -> BDT
-            const bonusBDT = Number(bonusUSD) * RATE;
-
-            vipLevels.push({
-                level: Number(lvl),
-                target: Number(target),
-                bonus: bonusBDT
-            });
-
-            // Sort by level
-            vipLevels.sort((a,b) => a.level - b.level);
-
-            // Clear inputs
-            document.getElementById('vipLvl').value = "";
-            document.getElementById('vipTarget').value = "";
-            document.getElementById('vipBonus').value = "";
-            
-            renderVipList();
-        }
-
-        function removeVipLevel(index) {
-            vipLevels.splice(index, 1);
-            renderVipList();
-        }
-
-        function renderVipList() {
-            const list = document.getElementById('vipList');
-            list.innerHTML = "";
-            vipLevels.forEach((v, i) => {
-                // Convert BDT -> USD for display
-                const showUSD = (v.bonus / RATE).toFixed(2);
-                list.innerHTML += `
-                <div class="row-item">
-                    <div class="row-info">
-                        <span style="color:#f39c12; font-weight:bold;">Lvl ${v.level}</span>
-                        <span>Target: ${v.target}</span>
-                        <span style="color:#00f260">Bonus: $${showUSD}</span>
-                    </div>
-                    <button class="btn-del" onclick="removeVipLevel(${i})"><i class="fas fa-trash"></i></button>
-                </div>`;
-            });
-        }
-
-        function saveVipSettings() {
-            if(vipLevels.length === 0) {
-                if(!confirm("Are you sure? This will delete all VIP levels.")) return;
-            }
-            db.ref('settings/vip_levels').set(vipLevels)
-                .then(() => alert("VIP Levels Saved!"));
-        }
-
     </script>
 </body>
 </html>
