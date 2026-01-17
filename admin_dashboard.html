@@ -150,7 +150,8 @@
             <i class="fas fa-cogs c-set"></i>
             <h4>System Settings</h4>
         </div>
-  <!-- weekly and monthly request  -->
+        
+        <!-- weekly and monthly request  -->
         <div class="card" onclick="window.location.href='admin_weekly_and_monthly_request.html'">
             <i class="fas fa-cogs c-set"></i>
             <h4> weekly monthly request </h4>
@@ -176,7 +177,17 @@
         }
 
         // 3. Firebase Init
-        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        // UPDATED FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
+            authDomain: "shopping28-84906.firebaseapp.com",
+            databaseURL: "https://shopping28-84906-default-rtdb.firebaseio.com",
+            projectId: "shopping28-84906",
+            storageBucket: "shopping28-84906.firebasestorage.app",
+            messagingSenderId: "252107906792",
+            appId: "1:252107906792:web:d39b0be25c88e07015b35d"
+        };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
