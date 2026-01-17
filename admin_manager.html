@@ -39,14 +39,14 @@
 <div class="container">
     <div class="top-bar">
         <a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a>
-        <h3>User & Balance Manager</h3>
+        <h3>User & Balance Manager ($)</h3>
     </div>
     
     <div class="stats-grid">
         <div class="stat-card bg-total"><h3>Total Users</h3><span id="count-total">0</span></div>
         <div class="stat-card bg-active"><h3>Active Users</h3><span id="count-active">0</span></div>
         <div class="stat-card bg-inactive"><h3>Inactive</h3><span id="count-inactive">0</span></div>
-        <div class="stat-card bg-money"><h3>User Balance</h3><span id="count-balance">৳0</span></div>
+        <div class="stat-card bg-money"><h3>User Balance (USD)</h3><span id="count-balance">$0.00</span></div>
     </div>
 
     <!-- Search Bar -->
@@ -59,8 +59,8 @@
             <tr>
                 <th>User Info</th>
                 <th>Status</th>
-                <th>Balance</th>
-                <th>Action</th>
+                <th>Balance (USD)</th>
+                <th>Action (Amount in $)</th>
             </tr>
         </thead>
         <tbody id="userList">
@@ -85,33 +85,36 @@
     
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    
+    const RATE = 120; // 1 USD = 120 BDT
 
     let allUsersData = {}; 
 
     // ডাটাবেস থেকে ডাটা লোড করা হচ্ছে
     db.ref('users').on('value', (snapshot) => {
         allUsersData = snapshot.val() || {};
-        
-        // কনসোলে চেক করুন ডাটা ঠিকমতো আসছে কিনা
         console.log("Loaded Users:", allUsersData);
-
         calculateStats(); 
         filterData(); 
     });
 
-    // পরিসংখ্যান হিসাব করার ফাংশন
+    // পরিসংখ্যান হিসাব করার ফাংশন (ডলারে)
     function calculateStats() {
-        let totalUsers = 0, activeUsers = 0, inactiveUsers = 0, totalBal = 0;
+        let totalUsers = 0, activeUsers = 0, inactiveUsers = 0, totalBalBDT = 0;
         Object.keys(allUsersData).forEach(key => {
             const u = allUsersData[key];
             totalUsers++;
             if (u.status === 'active') activeUsers++; else inactiveUsers++;
-            totalBal += u.balance ? parseFloat(u.balance) : 0;
+            totalBalBDT += u.balance ? parseFloat(u.balance) : 0;
         });
+        
+        // BDT to USD conversion for display
+        const totalBalUSD = totalBalBDT / RATE;
+
         document.getElementById('count-total').innerText = totalUsers;
         document.getElementById('count-active').innerText = activeUsers;
         document.getElementById('count-inactive').innerText = inactiveUsers;
-        document.getElementById('count-balance').innerText = "৳" + totalBal.toFixed(2);
+        document.getElementById('count-balance').innerText = "$" + totalBalUSD.toFixed(2);
     }
 
     // সার্চ ফিল্টার এবং টেবিল দেখানোর ফাংশন
@@ -125,17 +128,20 @@
         Object.keys(allUsersData).forEach(key => {
             const u = allUsersData[key];
             
-            // স্মার্ট চেক: রেফার কোড যেই নামেই থাকুক না কেন, এখানে ধরা পড়বে
-            // added u.ownCode to match registration logic
+            // স্মার্ট চেক: রেফার কোড যেই নামেই থাকুক না কেন
             const realRef = u.ownCode || u.ref || u.referral || u.referralCode || u.inviteCode || u.refCode || "N/A";
             
             const userRefSearch = realRef.toString().toLowerCase();
             const userPhone = (u.phone || "").toLowerCase();
 
-            // সার্চ লজিক: রেফার কোড অথবা ফোন নাম্বার দিয়ে সার্চ করা যাবে
+            // সার্চ লজিক
             if(searchVal === "" || userRefSearch.includes(searchVal) || userPhone.includes(searchVal)) {
                 found = true;
-                const bal = u.balance ? parseFloat(u.balance) : 0;
+                
+                // Balance in Database is BDT, Converting to USD for Display
+                const balBDT = u.balance ? parseFloat(u.balance) : 0;
+                const balUSD = (balBDT / RATE).toFixed(2);
+                
                 const statusClass = u.status === 'active' ? 's-active' : 's-pending';
                 
                 userList.innerHTML += `<tr>
@@ -147,12 +153,12 @@
                             </div>
                         </td>
                         <td><span class="status-badge ${statusClass}">${(u.status||'pending').toUpperCase()}</span></td>
-                        <td>৳${bal}</td>
+                        <td>$${balUSD}</td>
                         <td>
                             <div style="display:flex; align-items:center;">
-                                <input type="number" id="amt-${key}" placeholder="0">
-                                <button class="btn btn-up" onclick="modBal('${key}', ${bal}, 'add')">+</button>
-                                <button class="btn btn-down" onclick="modBal('${key}', ${bal}, 'sub')">-</button>
+                                <input type="number" id="amt-${key}" placeholder="$ Amount">
+                                <button class="btn btn-up" onclick="modBal('${key}', ${balBDT}, 'add')">+</button>
+                                <button class="btn btn-down" onclick="modBal('${key}', ${balBDT}, 'sub')">-</button>
                             </div>
                         </td>
                     </tr>`;
@@ -164,13 +170,18 @@
         }
     }
 
-    // ব্যালেন্স আপডেট ফাংশন
-    window.modBal = function(uid, current, type) {
-        const amt = parseFloat(document.getElementById(`amt-${uid}`).value);
-        if(!amt || amt <= 0) return alert("Enter valid amount");
-        const newBal = type === 'add' ? current + amt : current - amt;
+    // ব্যালেন্স আপডেট ফাংশন (USD Input -> BDT Database)
+    window.modBal = function(uid, currentBDT, type) {
+        const amtUSD = parseFloat(document.getElementById(`amt-${uid}`).value);
         
-        db.ref('users/' + uid).update({ balance: newBal })
+        if(!amtUSD || amtUSD <= 0) return alert("Enter valid USD amount");
+        
+        // Convert input USD to BDT
+        const amtBDT = amtUSD * RATE;
+
+        const newBalBDT = type === 'add' ? currentBDT + amtBDT : currentBDT - amtBDT;
+        
+        db.ref('users/' + uid).update({ balance: newBalBDT })
             .then(() => { 
                 alert("Balance Updated Successfully!"); 
                 document.getElementById(`amt-${uid}`).value = ""; 
