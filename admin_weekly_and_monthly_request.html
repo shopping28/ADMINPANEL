@@ -15,41 +15,32 @@
         .back-btn { background: #222; color: #ccc; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; }
         
         /* TABS */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: #222; color: #aaa; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { flex: 1; min-width: 150px; padding: 12px; border: none; background: #222; color: #aaa; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: var(--gold); color: black; }
 
         /* SECTIONS */
         .section { display: none; }
         .section.active { display: block; }
 
-        /* FORMS */
+        /* CARDS & LISTS */
         .form-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 15px; }
         label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
         input, select { width: 100%; padding: 12px; background: #0b0b15; border: 1px solid #444; color: white; border-radius: 6px; box-sizing: border-box; }
-        input:focus, select:focus { border-color: var(--gold); outline: none; }
         
         .btn-save { width: 100%; background: var(--green); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        .btn-save:hover { opacity: 0.9; }
-
-        /* LISTS */
-        .level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
-        .lvl-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; position: relative; border: 1px solid var(--border); transition: 0.3s; }
-        .lvl-item:hover { border-color: #555; background: rgba(255,255,255,0.08); }
         
+        .level-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; }
+        .lvl-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; position: relative; border: 1px solid var(--border); }
         .lvl-tag { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
         .tag-w { background: rgba(52, 152, 219, 0.2); color: var(--blue); }
         .tag-m { background: rgba(155, 89, 182, 0.2); color: var(--purple); }
-        
         .btn-del { background: rgba(255, 71, 87, 0.1); color: var(--red); border: 1px solid var(--red); padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 10px; width: 100%; }
-        .btn-del:hover { background: var(--red); color: white; }
 
-        /* REQUESTS */
+        /* REQUEST CARDS */
         .req-card { background: var(--card); padding: 20px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid var(--gold); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .req-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .req-badge { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; }
-        
         .req-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; }
         .det-box { display: flex; flex-direction: column; }
         .det-label { color: #aaa; font-size: 0.75rem; }
@@ -58,10 +49,12 @@
         .btn-act { flex: 1; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
         .b-app { background: var(--green); color: black; }
         .b-rej { background: rgba(255, 71, 87, 0.2); color: var(--red); border: 1px solid var(--red); }
-        .b-rej:hover { background: var(--red); color: white; }
+
+        /* REWARD CARD SPECIAL STYLE */
+        .reward-card { border-left-color: var(--blue); }
+        .reward-btn { background: var(--blue); color: white; }
 
         .empty-msg { text-align: center; color: #666; padding: 40px; font-style: italic; }
-
     </style>
 </head>
 <body>
@@ -74,261 +67,139 @@
 
         <div class="tabs">
             <button class="tab-btn active" onclick="showTab('setup')"><i class="fas fa-plus-circle"></i> Set Targets & Days</button>
-            <button class="tab-btn" onclick="showTab('requests')"><i class="fas fa-users-cog"></i> User Requests</button>
+            <button class="tab-btn" onclick="showTab('apply_req')"><i class="fas fa-user-plus"></i> User Requests</button>
+            <button class="tab-btn" onclick="showTab('reward_req')"><i class="fas fa-gift"></i> Reward Requests</button>
         </div>
 
-        <!-- 1. SETUP SECTION (ADD LEVELS) -->
+        <!-- 1. SETUP SECTION -->
         <div id="setup" class="section active">
             <div class="form-card">
                 <h3 style="margin-top:0; color:var(--gold);">➕ Add / Update Level</h3>
                 <div class="form-grid">
-                    <div>
-                        <label>Challenge Type</label>
-                        <select id="t_type">
-                            <option value="weekly">Weekly Challenge</option>
-                            <option value="monthly">Monthly Challenge</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>Level Number</label>
-                        <input type="number" id="t_lvl" placeholder="Ex: 1">
-                    </div>
-                    <div>
-                        <label>Target Referrals</label>
-                        <input type="number" id="t_target" placeholder="Ex: 10">
-                    </div>
-                    <div>
-                        <label>Reward ($ USD)</label>
-                        <input type="number" id="t_reward" placeholder="Ex: 5">
-                    </div>
-                    <div>
-                        <label>Entry Cost (Credits)</label>
-                        <input type="number" id="t_cost" placeholder="Ex: 2">
-                    </div>
-                    <div>
-                        <label style="color:#00f260">Duration (Days)</label>
-                        <input type="number" id="t_days" placeholder="Ex: 7 or 30">
-                    </div>
+                    <div><label>Type</label><select id="t_type"><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+                    <div><label>Level No</label><input type="number" id="t_lvl" placeholder="Ex: 1"></div>
+                    <div><label>Target Refs</label><input type="number" id="t_target" placeholder="Ex: 10"></div>
+                    <div><label>Reward ($)</label><input type="number" id="t_reward" placeholder="Ex: 5"></div>
+                    <div><label>Cost (Credits)</label><input type="number" id="t_cost" placeholder="Ex: 2"></div>
+                    <div><label style="color:#00f260">Duration (Days)</label><input type="number" id="t_days" placeholder="Ex: 7"></div>
                 </div>
                 <button class="btn-save" onclick="addLevel()">Save Configuration</button>
             </div>
-
             <h3 style="border-bottom:1px solid #333; padding-bottom:10px;">Active Configuration</h3>
-            <div id="activeLevels" class="level-list">
-                <div class="empty-msg">Loading active levels...</div>
-            </div>
+            <div id="activeLevels" class="level-list"><div class="empty-msg">Loading...</div></div>
         </div>
 
-        <!-- 2. REQUESTS SECTION (APPROVE/REJECT) -->
-        <div id="requests" class="section">
-            <h3 style="color:#aaa;">Pending User Approvals</h3>
-            <div id="reqList">
-                <div class="empty-msg">Checking for requests...</div>
-            </div>
+        <!-- 2. USER APPLY REQUESTS -->
+        <div id="apply_req" class="section">
+            <h3 style="color:#aaa;">Pending Applications (Start Challenge)</h3>
+            <div id="applyList"><div class="empty-msg">Checking...</div></div>
+        </div>
+
+        <!-- 3. REWARD REQUESTS -->
+        <div id="reward_req" class="section">
+            <h3 style="color:#aaa;">Pending Rewards (Finish Challenge)</h3>
+            <div id="rewardList"><div class="empty-msg">Checking...</div></div>
         </div>
     </div>
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <script>
-        // FIREBASE CONFIG
-        const firebaseConfig = {
-            apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
-            authDomain: "shopping28-84906.firebaseapp.com",
-            databaseURL: "https://shopping28-84906-default-rtdb.firebaseio.com",
-            projectId: "shopping28-84906",
-            storageBucket: "shopping28-84906.firebasestorage.app",
-            messagingSenderId: "252107906792",
-            appId: "1:252107906792:web:d39b0be25c88e07015b35d"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE", authDomain: "shopping28-84906.firebaseapp.com", databaseURL: "https://shopping28-84906-default-rtdb.firebaseio.com", projectId: "shopping28-84906", storageBucket: "shopping28-84906.firebasestorage.app", messagingSenderId: "252107906792", appId: "1:252107906792:web:d39b0be25c88e07015b35d" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const RATE = 120; // 1 USD = 120 BDT
 
-        // TABS LOGIC
         function showTab(id) {
             document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            event.target.classList.add('active');
+            event.target.closest('button').classList.add('active');
         }
 
-        // ==========================
-        // 1. SETUP LOGIC (ADD/DEL LEVELS)
-        // ==========================
-        
+        // --- 1. SETUP LOGIC ---
         function addLevel() {
-            const type = document.getElementById('t_type').value;
-            const lvl = document.getElementById('t_lvl').value;
-            const target = document.getElementById('t_target').value;
-            const reward = document.getElementById('t_reward').value;
-            const cost = document.getElementById('t_cost').value;
-            const days = document.getElementById('t_days').value;
-
-            if(!lvl || !target || !reward || !cost || !days) return alert("Please fill all fields!");
-
-            const path = `settings/targets/${type}/${lvl}`;
-            db.ref(path).set({
-                level: Number(lvl),
-                target: Number(target),
-                reward: Number(reward),
-                cost: Number(cost),
-                duration: Number(days),
-                type: type
-            }).then(() => {
-                alert("Level Saved Successfully!");
-                // Clear inputs
-                document.getElementById('t_lvl').value = "";
-                document.getElementById('t_target').value = "";
-                document.getElementById('t_reward').value = "";
-                document.getElementById('t_cost').value = "";
-                document.getElementById('t_days').value = "";
-            });
+            const type = document.getElementById('t_type').value, lvl = document.getElementById('t_lvl').value, target = document.getElementById('t_target').value, reward = document.getElementById('t_reward').value, cost = document.getElementById('t_cost').value, days = document.getElementById('t_days').value;
+            if(!lvl || !target || !reward || !cost || !days) return alert("Fill all fields!");
+            db.ref(`settings/targets/${type}/${lvl}`).set({ level: Number(lvl), target: Number(target), reward: Number(reward), cost: Number(cost), duration: Number(days), type }).then(() => { alert("Saved!"); document.getElementById('t_lvl').value=""; });
         }
-
-        // Load Levels
-        function loadLevels() {
-            const container = document.getElementById('activeLevels');
-            
-            db.ref('settings/targets').on('value', snap => {
-                container.innerHTML = "";
-                if(!snap.exists()) { container.innerHTML = "<div class='empty-msg'>No levels configured.</div>"; return; }
-                
-                const data = snap.val();
-                if(data.weekly) Object.values(data.weekly).forEach(l => renderLevelCard(l, container));
-                if(data.monthly) Object.values(data.monthly).forEach(l => renderLevelCard(l, container));
-            });
-        }
+        
+        db.ref('settings/targets').on('value', snap => {
+            const container = document.getElementById('activeLevels'); container.innerHTML = "";
+            if(!snap.exists()) { container.innerHTML = "<div class='empty-msg'>No levels configured.</div>"; return; }
+            const data = snap.val();
+            if(data.weekly) Object.values(data.weekly).forEach(l => renderLevelCard(l, container));
+            if(data.monthly) Object.values(data.monthly).forEach(l => renderLevelCard(l, container));
+        });
 
         function renderLevelCard(l, parent) {
             const tagClass = l.type === 'weekly' ? 'tag-w' : 'tag-m';
-            const html = `
-                <div class="lvl-item">
-                    <span class="lvl-tag ${tagClass}">${l.type.toUpperCase()}</span>
-                    <h3 style="margin:0 0 10px 0;">Level ${l.level}</h3>
-                    <div style="font-size:0.9rem; color:#ccc; line-height:1.6;">
-                        🎯 Target: <b style="color:white">${l.target}</b> Refs<br>
-                        💰 Reward: <b style="color:#00f260">$${l.reward}</b><br>
-                        🎫 Cost: <b>${l.cost}</b> Credits<br>
-                        ⏳ Duration: <b style="color:#f1c40f">${l.duration} Days</b>
-                    </div>
-                    <button class="btn-del" onclick="deleteLevel('${l.type}', '${l.level}')">Delete Level</button>
-                </div>
-            `;
-            parent.innerHTML += html;
+            parent.innerHTML += `<div class="lvl-item"><span class="lvl-tag ${tagClass}">${l.type.toUpperCase()}</span><h3 style="margin:0 0 10px 0;">Level ${l.level}</h3><div style="font-size:0.9rem; color:#ccc;">🎯 Target: <b style="color:white">${l.target}</b> Refs<br>💰 Reward: <b style="color:#00f260">$${l.reward}</b><br>🎫 Cost: <b>${l.cost}</b> Credits<br>⏳ Duration: <b style="color:#f1c40f">${l.duration} Days</b></div><button class="btn-del" onclick="if(confirm('Delete?')) db.ref('settings/targets/${l.type}/${l.level}').remove()">Delete Level</button></div>`;
         }
 
-        function deleteLevel(type, lvl) {
-            if(confirm(`Delete ${type} Level ${lvl}?`)) {
-                db.ref(`settings/targets/${type}/${lvl}`).remove();
-            }
-        }
-
-        // ==========================
-        // 2. REQUESTS LOGIC (APPROVE/REJECT)
-        // ==========================
-        
+        // --- 2. APPLY REQUESTS ---
         db.ref('target_requests').orderByChild('status').equalTo('pending').on('value', snap => {
-            const list = document.getElementById('reqList');
-            list.innerHTML = "";
-            if(!snap.exists()) { list.innerHTML = "<div class='empty-msg'>No pending requests found.</div>"; return; }
-
+            const list = document.getElementById('applyList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<div class='empty-msg'>No pending applications.</div>"; return; }
             snap.forEach(child => {
-                const k = child.key;
-                const d = child.val();
-                const typeColor = d.type === 'weekly' ? 'var(--blue)' : 'var(--purple)';
-                
-                const html = `
-                    <div class="req-card">
-                        <div class="req-header">
-                            <span class="req-badge" style="background:${typeColor}; color:white;">${d.type.toUpperCase()}</span>
-                            <span style="font-size:0.8rem; opacity:0.7;">${new Date(d.timestamp).toLocaleString()}</span>
-                        </div>
-                        
-                        <div style="margin-bottom:10px; font-weight:bold; font-size:1.1rem;">
-                            Request for Level ${d.level}
-                        </div>
-
-                        <div class="req-details">
-                            <div class="det-box"><span class="det-label">User UID</span><span>${d.uid}</span></div>
-                            <div class="det-box"><span class="det-label">Target</span><span>${d.targetCount} Referrals</span></div>
-                            <div class="det-box"><span class="det-label">Potential Reward</span><span style="color:var(--green)">$${d.reward}</span></div>
-                            <div class="det-box"><span class="det-label">Cost Paid</span><span>${d.cost} Credits</span></div>
-                        </div>
-
-                        <div class="btn-grp">
-                            <button class="btn-act b-app" onclick="approveRequest('${k}', '${d.uid}', '${d.type}', ${d.level}, ${d.targetCount}, ${d.reward})">
-                                <i class="fas fa-check-circle"></i> Approve & Start
-                            </button>
-                            <button class="btn-act b-rej" onclick="rejectRequest('${k}', '${d.uid}', ${d.cost})">
-                                <i class="fas fa-times-circle"></i> Reject
-                            </button>
-                        </div>
-                    </div>
-                `;
-                list.innerHTML += html;
+                const k = child.key; const d = child.val();
+                list.innerHTML += `<div class="req-card"><div class="req-header"><span class="req-badge" style="background:#333; color:white;">${d.type.toUpperCase()} APP</span><span>${new Date(d.timestamp).toLocaleDateString()}</span></div><div style="font-weight:bold; margin-bottom:10px;">Apply for Level ${d.level}</div><div class="req-details"><div class="det-box"><span class="det-label">User UID</span><span>${d.uid}</span></div><div class="det-box"><span class="det-label">Cost Paid</span><span>${d.cost} Credits</span></div></div><div class="btn-grp"><button class="btn-act b-app" onclick="approveApply('${k}','${d.uid}','${d.type}',${d.level},${d.targetCount},${d.reward})">Approve & Start</button><button class="btn-act b-rej" onclick="rejectApply('${k}','${d.uid}',${d.cost})">Reject</button></div></div>`;
             });
         });
 
-        function approveRequest(key, uid, type, level, target, reward) {
-            if(!confirm("Approve this request? The timer will start now.")) return;
-
-            // 1. Fetch current settings for this level to get the 'Duration'
-            db.ref(`settings/targets/${type}/${level}`).once('value', settingsSnap => {
-                const settings = settingsSnap.val();
-                
-                // Fallback duration if not set (7 for weekly, 30 for monthly)
-                let durationDays = 30;
-                if(settings && settings.duration) {
-                    durationDays = settings.duration;
-                } else {
-                    durationDays = (type === 'weekly') ? 7 : 30;
-                }
-
-                // 2. Get User's Current Team Count (Baseline)
-                db.ref('users/'+uid+'/ownCode').once('value', snap => {
-                    const code = snap.val();
-                    db.ref('users').orderByChild('referredBy').equalTo(code).once('value', teamSnap => {
-                        let activeCount = 0;
-                        teamSnap.forEach(u => { if(u.val().status === 'active') activeCount++; });
-
-                        // Calculate End Time based on Duration
-                        const endTime = Date.now() + (durationDays * 24 * 60 * 60 * 1000);
-
+        function approveApply(key, uid, type, level, target, reward) {
+            if(!confirm("Start Challenge for User?")) return;
+            db.ref(`settings/targets/${type}/${level}`).once('value', s => {
+                const settings = s.val();
+                const days = (settings && settings.duration) ? settings.duration : 30;
+                db.ref('users/'+uid+'/ownCode').once('value', c => {
+                    db.ref('users').orderByChild('referredBy').equalTo(c.val()).once('value', team => {
+                        let activeCount = 0; team.forEach(u => { if(u.val().status === 'active') activeCount++; });
+                        const endTime = Date.now() + (days * 24 * 60 * 60 * 1000);
                         const updates = {};
                         updates['target_requests/'+key+'/status'] = 'approved';
-                        updates['users/'+uid+'/active_target'] = {
-                            type, level, targetCount: target, reward,
-                            startCount: activeCount, startTime: Date.now(), endTime,
-                            durationDays: durationDays
-                        };
-
-                        db.ref().update(updates).then(() => alert(`Approved! Challenge started for ${durationDays} days.`));
+                        updates['users/'+uid+'/active_target'] = { type, level, targetCount: target, reward, startCount: activeCount, startTime: Date.now(), endTime, durationDays: days };
+                        db.ref().update(updates).then(() => alert(`Started for ${days} days!`));
                     });
                 });
             });
         }
 
-        function rejectRequest(key, uid, cost) {
-            const reason = prompt("Enter Rejection Reason:");
-            if(!reason) return;
-
+        function rejectApply(key, uid, cost) {
+            const reason = prompt("Reason:"); if(!reason) return;
             db.ref('users/'+uid+'/credits').once('value', s => {
-                const cur = s.val() || 0;
-                const updates = {};
-                updates['target_requests/'+key+'/status'] = 'rejected';
-                updates['users/'+uid+'/credits'] = cur + cost; // Refund Credits
-                updates['users/'+uid+'/last_rejection'] = reason;
-                updates['users/'+uid+'/rejection_seen'] = false;
-
-                db.ref().update(updates).then(() => alert("Request Rejected & Credits Refunded."));
+                db.ref().update({ ['target_requests/'+key+'/status']: 'rejected', ['users/'+uid+'/credits']: (s.val()||0)+cost, ['users/'+uid+'/last_rejection']: reason, ['users/'+uid+'/rejection_seen']: false }).then(() => alert("Rejected & Refunded."));
             });
         }
 
-        // INIT
-        loadLevels();
+        // --- 3. REWARD REQUESTS ---
+        db.ref('reward_requests').orderByChild('status').equalTo('pending').on('value', snap => {
+            const list = document.getElementById('rewardList'); list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<div class='empty-msg'>No reward claims.</div>"; return; }
+            snap.forEach(child => {
+                const k = child.key; const d = child.val();
+                list.innerHTML += `<div class="req-card reward-card"><div class="req-header"><span class="req-badge" style="background:var(--blue); color:white;">REWARD CLAIM</span><span>Level ${d.level}</span></div><div class="req-details"><div class="det-box"><span class="det-label">User UID</span><span>${d.uid}</span></div><div class="det-box"><span class="det-label">Reward Amount</span><span style="color:var(--green); font-size:1.1rem; font-weight:bold;">$${d.reward}</span></div></div><div class="btn-grp"><button class="btn-act reward-btn" onclick="approveReward('${k}','${d.uid}',${d.reward},'${d.type}')">Send $${d.reward}</button><button class="btn-act b-rej" onclick="if(confirm('Reject?')) db.ref('reward_requests/${k}').update({status:'rejected'})">Reject</button></div></div>`;
+            });
+        });
 
+        function approveReward(key, uid, amountUSD, type) {
+            if(!confirm(`Send $${amountUSD} to user?`)) return;
+            const amountBDT = amountUSD * RATE;
+            
+            // 1. Add to Balance
+            db.ref('users/'+uid+'/balance').transaction(b => (b||0) + amountBDT);
+            
+            // 2. Add to History (For Today's Profit Sync)
+            db.ref('users/'+uid+'/target_rewards').push({ amount: amountUSD, amountBDT: amountBDT, type: type, timestamp: Date.now() });
+
+            // 3. Close Request & Clear Active Target
+            const updates = {};
+            updates['reward_requests/'+key+'/status'] = 'approved';
+            updates['users/'+uid+'/active_target'] = null; // Clear target so they can apply again
+            
+            db.ref().update(updates).then(() => alert("Reward Sent & Balance Updated!"));
+        }
     </script>
 </body>
 </html>
