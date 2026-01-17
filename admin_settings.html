@@ -36,12 +36,21 @@
             <h2>Global Settings (USD)</h2>
         </div>
 
-        <!-- 1. PAYMENT SETTINGS -->
+        <!-- 1. PAYMENT SETTINGS (Fee + Wallet) -->
         <div class="card">
-            <h3 style="color:#00f260;"><i class="fas fa-wallet"></i> Activation Fee</h3>
-            <span class="note">Fee displayed to users in USD ($).</span>
+            <h3 style="color:#00f260;"><i class="fas fa-wallet"></i> Payment Settings</h3>
+            
+            <!-- Activation Fee -->
+            <label>Activation Fee ($)</label>
+            <span class="note" style="margin-bottom:5px;">Fee displayed to users.</span>
             <input type="number" id="actFee" placeholder="e.g. 10">
-            <button class="btn-save" onclick="saveFee()">Save Fee</button>
+
+            <!-- Admin Wallet Address -->
+            <label style="margin-top:15px;">Admin Wallet (USDT BEP20)</label>
+            <span class="note" style="margin-bottom:5px;">Users will send activation fee to this address.</span>
+            <input type="text" id="adminWallet" placeholder="0x..." style="color:#fff; border-color:#3498db;">
+
+            <button class="btn-save" onclick="savePaymentSettings()">Save Payment Settings</button>
         </div>
 
         <!-- 2. MULTI-LEVEL COMMISSION -->
@@ -82,9 +91,14 @@
         // LOAD SETTINGS
         db.ref('settings').once('value', (snap) => {
             const d = snap.val() || {};
-            if(d.payment) document.getElementById('actFee').value = d.payment.fee || '';
+            
+            // 1. Load Payment Info (Fee & Wallet)
+            if(d.payment) {
+                document.getElementById('actFee').value = d.payment.fee || '';
+                document.getElementById('adminWallet').value = d.payment.wallet || '';
+            }
 
-            // Load Referral Levels
+            // 2. Load Referral Levels
             if(d.referral_levels) {
                 commLevels = d.referral_levels;
             } else {
@@ -93,10 +107,17 @@
             renderCommList();
         });
 
-        // PAYMENT LOGIC
-        function saveFee() {
-            db.ref('settings/payment/fee').set(Number(document.getElementById('actFee').value))
-              .then(() => alert("Activation Fee Saved!"));
+        // SAVE PAYMENT SETTINGS (FEE + WALLET)
+        function savePaymentSettings() {
+            const fee = Number(document.getElementById('actFee').value);
+            const wallet = document.getElementById('adminWallet').value.trim();
+
+            if(!wallet) return alert("Please enter wallet address!");
+
+            db.ref('settings/payment').update({
+                fee: fee,
+                wallet: wallet
+            }).then(() => alert("Payment Settings Saved!"));
         }
 
         // COMMISSION LOGIC
