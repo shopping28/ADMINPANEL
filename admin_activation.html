@@ -8,20 +8,62 @@
     <style>
         body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; }
-        .req-card { background: #1a1a2e; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #f39c12; }
-        .btn-approve { background: #00f260; color: #000; border:none; padding:10px; cursor:pointer; width:100%; font-weight:bold; border-radius:5px;}
+        
+        .header { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
+        .back-btn { color: #aaa; text-decoration: none; font-size: 1.1rem; margin-right: 15px; transition: 0.3s; }
+        .back-btn:hover { color: #fff; }
+
+        .req-card { 
+            background: #1a1a2e; padding: 20px; border-radius: 12px; 
+            margin-bottom: 15px; border: 1px solid #333; 
+            border-left: 5px solid #f39c12; 
+            display: flex; flex-direction: column; gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+
+        .info-row { display: flex; flex-direction: column; margin-bottom: 5px; }
+        .label { color: #aaa; font-size: 0.85rem; }
+        .val { color: #fff; font-weight: 600; font-family: monospace; letter-spacing: 0.5px; word-break: break-all; }
+        .phone-highlight { color: #00d2d3; font-size: 1.1rem; }
+
+        .actions { display: flex; gap: 10px; margin-top: 15px; }
+        
+        button { 
+            padding: 12px 20px; border: none; border-radius: 6px; 
+            cursor: pointer; font-weight: bold; transition: 0.2s; flex: 1; 
+            display: flex; justify-content: center; align-items: center; gap: 5px;
+        }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-approve { background: #00f260; color: #000; }
+        .btn-approve:hover:not(:disabled) { background: #00c950; }
+        
+        .btn-reject { background: #ff4757; color: white; }
+        .btn-reject:hover:not(:disabled) { background: #e84118; }
+
+        .empty-msg { text-align: center; color: #777; margin-top: 50px; font-style: italic; }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h2>Pending Requests</h2>
-        <div id="list">Loading...</div>
+        <div class="header">
+            <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+            <h2>Pending Requests</h2>
+        </div>
+
+        <div id="list">
+            <div class="empty-msg"><i class="fas fa-circle-notch fa-spin"></i> Loading requests...</div>
+        </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
+        // FIREBASE CONFIGURATION
         const firebaseConfig = {
             apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
             authDomain: "shopping28-84906.firebaseapp.com",
@@ -31,66 +73,121 @@
             messagingSenderId: "252107906792",
             appId: "1:252107906792:web:d39b0be25c88e07015b35d"
         };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const RATE = 120; // 1 USD = 120 BDT
 
+        // Realtime Listener for Requests
         db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', (snapshot) => {
             const list = document.getElementById('list'); 
             list.innerHTML = "";
-            if(!snapshot.exists()) { list.innerHTML = "<p>No pending requests.</p>"; return; }
+            
+            if(!snapshot.exists()) { 
+                list.innerHTML = "<div class='empty-msg'>No pending requests found.</div>"; 
+                return; 
+            }
             
             snapshot.forEach((child) => {
                 const d = child.val();
-                list.innerHTML += `
-                <div class="req-card">
-                    <p>UID: ${d.uid}</p>
-                    <p>TrxID: ${d.trxId}</p>
-                    <button class="btn-approve" onclick="approve('${child.key}', '${d.uid}')">APPROVE & DISTRIBUTE</button>
-                </div>`;
+                const key = child.key;
+                
+                // Create Card Structure
+                const card = document.createElement('div');
+                card.className = 'req-card';
+                card.innerHTML = `
+                    <div class="info-row">
+                        <span class="label">User Phone</span>
+                        <span class="val phone-highlight" id="phone-${d.uid}">Loading...</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">User UID</span>
+                        <span class="val">${d.uid}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Sender Wallet</span>
+                        <span class="val">${d.senderWallet || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Transaction ID (TrxID)</span>
+                        <span class="val" style="color:#f39c12;">${d.trxId}</span>
+                    </div>
+                    
+                    <div class="actions">
+                        <button id="btn-app-${key}" class="btn-approve" onclick="approve('${key}', '${d.uid}')">
+                            <i class="fas fa-check"></i> APPROVE
+                        </button>
+                        <button id="btn-rej-${key}" class="btn-reject" onclick="reject('${key}')">
+                            <i class="fas fa-times"></i> REJECT
+                        </button>
+                    </div>
+                `;
+                list.prepend(card); // Show newest first
+
+                // Fetch Phone Number Asynchronously
+                fetchUserPhone(d.uid);
             });
         });
 
-        async function approve(key, uid) {
-            if(!confirm("Approve and Distribute Commission?")) return;
-
-            // 1. Get Commission Settings (Level 1, 2, 3 amounts in USD)
-            const settingsSnap = await db.ref('settings/referral_levels').once('value');
-            const levelsConfig = settingsSnap.val() || []; // Example: [{level:1, amount:120}, {level:2, amount:60}] (BDT)
-
-            // 2. Get User Info to find Referrer
-            const userSnap = await db.ref('users/' + uid).once('value');
-            const user = userSnap.val();
-            
-            if (user.status === 'active') return alert("Already Active!");
-
-            // 3. Recursive Commission Distribution
-            if(user.referredBy && user.referredBy !== "the_art2000") {
-                await distributeCommission(user.referredBy, 1, levelsConfig, user.ownCode);
-            }
-
-            // 4. Activate User
-            await db.ref('users/' + uid).update({ 
-                status: 'active', 
-                activatedAt: firebase.database.ServerValue.TIMESTAMP 
+        // Function to get Phone Number from Users node
+        function fetchUserPhone(uid) {
+            db.ref('users/' + uid + '/phone').once('value', snap => {
+                const phone = snap.val() || "Unknown";
+                const el = document.getElementById('phone-' + uid);
+                if(el) el.innerText = phone;
             });
-            
-            // 5. Update Request Status
-            await db.ref('activation_requests/' + key).update({ status: 'approved' });
-
-            alert("Account Activated & Commission Distributed!");
         }
 
-        // --- CORE MLM LOGIC ---
-        async function distributeCommission(currentUplineCode, currentLevel, config, sourceUserCode) {
-            // Find config for this level (Array index is level-1)
-            // config format from settings: [{level:1, amount: 120}, {level:2, amount: 60}] (Saved as BDT)
-            const levelSettings = config.find(c => c.level === currentLevel);
+        // === APPROVE LOGIC (With MLM) ===
+        async function approve(key, uid) {
+            if(!confirm("Confirm Approve?")) return;
+
+            const btnApp = document.getElementById('btn-app-' + key);
+            const btnRej = document.getElementById('btn-rej-' + key);
             
-            // If no settings for this level (e.g. Level 5 reached but only 3 set), STOP.
+            // Set Working State
+            if(btnApp) { btnApp.innerText = "Working..."; btnApp.disabled = true; }
+            if(btnRej) { btnRej.disabled = true; }
+
+            try {
+                // 1. Get Commission Settings
+                const settingsSnap = await db.ref('settings/referral_levels').once('value');
+                const levelsConfig = settingsSnap.val() || [];
+
+                // 2. Get User Info
+                const userSnap = await db.ref('users/' + uid).once('value');
+                const user = userSnap.val();
+                
+                if (!user) throw new Error("User not found!");
+                if (user.status === 'active') throw new Error("User already active!");
+
+                // 3. Distribute Commission
+                if(user.referredBy && user.referredBy !== "the_art2000") {
+                    await distributeCommission(user.referredBy, 1, levelsConfig, user.ownCode);
+                }
+
+                // 4. Activate User
+                await db.ref('users/' + uid).update({ 
+                    status: 'active', 
+                    activatedAt: firebase.database.ServerValue.TIMESTAMP 
+                });
+                
+                // 5. Update Request Status
+                await db.ref('activation_requests/' + key).update({ status: 'approved' });
+
+                alert("Approved Successfully!");
+
+            } catch (error) {
+                alert("Error: " + error.message);
+                if(btnApp) { btnApp.innerText = "APPROVE"; btnApp.disabled = false; }
+                if(btnRej) { btnRej.disabled = false; }
+            }
+        }
+
+        // Recursive Commission Logic
+        async function distributeCommission(currentUplineCode, currentLevel, config, sourceUserCode) {
+            const levelSettings = config.find(c => c.level === currentLevel);
             if(!levelSettings || levelSettings.amount <= 0) return;
 
-            // Find the Upline User by Code
             const snap = await db.ref('users').orderByChild('ownCode').equalTo(currentUplineCode).once('value');
             
             if(snap.exists()) {
@@ -98,22 +195,44 @@
                 const uplineData = Object.values(snap.val())[0];
                 const amountBDT = parseFloat(levelSettings.amount);
 
-                // A. Add Money to Balance
+                // Add Balance
                 await db.ref('users/' + uplineUid + '/balance').transaction(bal => (bal || 0) + amountBDT);
 
-                // B. Record History (For My Team Page)
+                // History
                 await db.ref('users/' + uplineUid + '/commission_history').push({
-                    fromUser: sourceUserCode, // Who joined?
-                    level: currentLevel,      // Which level commission?
-                    amount: amountBDT,        // How much BDT?
+                    fromUser: sourceUserCode,
+                    level: currentLevel,
+                    amount: amountBDT,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                // C. Recurse to Next Upline (Go up the chain)
+                // Next Level
                 if(uplineData.referredBy && uplineData.referredBy !== "the_art2000") {
                     await distributeCommission(uplineData.referredBy, currentLevel + 1, config, sourceUserCode);
                 }
             }
+        }
+
+        // === REJECT LOGIC ===
+        function reject(key) {
+            if(!confirm("Are you sure you want to REJECT this request?")) return;
+
+            const btnApp = document.getElementById('btn-app-' + key);
+            const btnRej = document.getElementById('btn-rej-' + key);
+
+            // Set Working State
+            if(btnRej) { btnRej.innerText = "Working..."; btnRej.disabled = true; }
+            if(btnApp) { btnApp.disabled = true; }
+
+            db.ref('activation_requests/' + key).update({ status: 'rejected' })
+                .then(() => {
+                    // Item will automatically disappear due to realtime listener
+                })
+                .catch(err => {
+                    alert("Error: " + err.message);
+                    if(btnRej) { btnRej.innerText = "REJECT"; btnRej.disabled = false; }
+                    if(btnApp) { btnApp.disabled = false; }
+                });
         }
     </script>
 </body>
