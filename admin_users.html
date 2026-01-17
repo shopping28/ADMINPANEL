@@ -3,56 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin - User List</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0f0c29; color: white; font-family: 'Poppins', sans-serif; padding: 20px; }
+        :root {
+            --bg: #0f0c29; --card: #1b1b2f; --border: #333;
+            --gold: #f1c40f; --green: #00f260; --red: #ff4757; --text: #fff;
+        }
+        body { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; padding: 20px; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .back-btn { color: #aaa; text-decoration: none; font-size: 1.1rem; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .back-btn { color: #aaa; text-decoration: none; font-size: 1rem; display: flex; align-items: center; gap: 5px; transition: 0.3s; }
+        .back-btn:hover { color: white; }
         
         /* Search Box */
         .search-box {
-            width: 100%; padding: 12px; margin-bottom: 20px; 
-            background:#1a1a2e; border:1px solid #444; color:white; 
-            border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+            width: 100%; padding: 15px; margin-bottom: 25px; 
+            background: #0b0b15; border: 1px solid #444; color: white; 
+            border-radius: 12px; box-sizing: border-box; font-size: 1rem;
+            outline: none; transition: 0.3s;
         }
-        .search-box:focus { border-color: #00f260; outline: none; }
+        .search-box:focus { border-color: var(--gold); box-shadow: 0 0 10px rgba(241, 196, 15, 0.2); }
 
         /* User Card Style */
         .user-card { 
-            background: #1a1a2e; padding: 20px; border-radius: 10px; margin-bottom: 15px; 
-            border-left: 5px solid #3498db; display: flex; 
-            justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
+            background: var(--card); padding: 20px; border-radius: 12px; margin-bottom: 15px; 
+            border: 1px solid var(--border); border-left: 5px solid #3498db; 
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
             transition: 0.3s;
+            animation: fadeIn 0.3s ease-in;
         }
-        .user-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .user-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-color: #555; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .info-group p { margin: 5px 0; font-size: 0.95rem; color: #ccc; }
-        .info-group strong { color: #00f260; display: inline-block; width: 100px; }
-        .pass-text { color: #f1c40f; font-weight: bold; background: rgba(241, 196, 15, 0.1); padding: 2px 6px; border-radius: 4px; }
+        .info-group { flex: 1; min-width: 250px; }
+        .info-group p { margin: 6px 0; font-size: 0.9rem; color: #ccc; }
+        .info-group strong { color: var(--green); display: inline-block; width: 110px; }
+        
+        .pass-text { color: var(--gold); font-family: monospace; background: rgba(241, 196, 15, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(241, 196, 15, 0.2); }
+        .balance-text { color: #fff; font-weight: bold; }
+        .usd-est { font-size: 0.8rem; color: #888; }
 
         /* Buttons */
-        .actions { display: flex; flex-direction: column; gap: 10px; min-width: 120px; }
-        .btn { padding: 8px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; color: white; }
-        .btn-active { background: #2ecc71; }
-        .btn-ban { background: #e74c3c; }
+        .actions { display: flex; flex-direction: column; gap: 10px; min-width: 140px; }
+        .btn { padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 0.9rem; transition: 0.2s; }
+        .btn:hover { opacity: 0.9; transform: scale(1.02); }
+        .btn-active { background: var(--green); color: black; }
+        .btn-ban { background: var(--red); }
         
         /* Status Colors */
-        .st-active { color: #2ecc71; font-weight: bold; }
-        .st-banned { color: #e74c3c; font-weight: bold; }
-        .st-pending { color: #f1c40f; font-weight: bold; }
+        .st-active { color: var(--green); font-weight: bold; text-transform: uppercase; background: rgba(0, 242, 96, 0.1); padding: 2px 8px; border-radius: 4px; }
+        .st-banned { color: var(--red); font-weight: bold; text-transform: uppercase; background: rgba(255, 71, 87, 0.1); padding: 2px 8px; border-radius: 4px; }
+        .st-pending { color: var(--gold); font-weight: bold; text-transform: uppercase; }
+
+        .empty-msg { text-align: center; color: #666; font-style: italic; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <a href="admin_dashboard.html" class="back-btn">← Back Dashboard</a>
+        <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
         <h2>User Management</h2>
     </div>
     
     <!-- Search Input -->
-    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search by Name or Phone Number..." onkeyup="filterUsers()">
+    <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search by Name, Phone or UID..." onkeyup="filterUsers()">
     
     <div id="userListContainer">
         <p style="text-align:center; color:#aaa;">Loading users...</p>
@@ -62,9 +77,20 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script>
-        const firebaseConfig = { apiKey: "AIzaSyDzEo1rLM6xwz8O4iEYIOvFi4JZQG_TJ0g", authDomain: "art-paid-work001.firebaseapp.com", databaseURL: "https://art-paid-work001-default-rtdb.firebaseio.com", projectId: "art-paid-work001", storageBucket: "art-paid-work001.firebasestorage.app", messagingSenderId: "524647364992", appId: "1:524647364992:web:c91b2dc55ab9b30d3ba965" };
+        // UPDATED FIREBASE CONFIGURATION
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
+            authDomain: "shopping28-84906.firebaseapp.com",
+            databaseURL: "https://shopping28-84906-default-rtdb.firebaseio.com",
+            projectId: "shopping28-84906",
+            storageBucket: "shopping28-84906.firebasestorage.app",
+            messagingSenderId: "252107906792",
+            appId: "1:252107906792:web:d39b0be25c88e07015b35d"
+        };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const RATE = 120; // 1 USD = 120 BDT
 
         let allUsers = [];
 
@@ -75,10 +101,16 @@
                 snapshot.forEach(childSnapshot => {
                     allUsers.push({ key: childSnapshot.key, ...childSnapshot.val() });
                 });
-                allUsers.reverse(); // Show new users first
+                // Sort by Join Date (Newest First) if available, else standard
+                allUsers.sort((a, b) => {
+                    const dateA = new Date(a.joinedAt || 0);
+                    const dateB = new Date(b.joinedAt || 0);
+                    return dateB - dateA;
+                });
+                
                 renderUsers(allUsers);
             } else {
-                document.getElementById('userListContainer').innerHTML = "<p style='text-align:center;'>No users found.</p>";
+                document.getElementById('userListContainer').innerHTML = "<p class='empty-msg'>No users found.</p>";
             }
         });
 
@@ -88,16 +120,18 @@
             container.innerHTML = "";
 
             if (users.length === 0) {
-                container.innerHTML = "<p style='text-align:center; color:#aaa;'>No matching users found.</p>";
+                container.innerHTML = "<p class='empty-msg'>No matching users found.</p>";
                 return;
             }
 
             users.forEach(user => {
                 const status = user.status || 'pending';
                 const statusClass = status === 'active' ? 'st-active' : (status === 'banned' ? 'st-banned' : 'st-pending');
-                
-                // Password Field (Auto Updates)
                 const password = user.password || "Not Saved"; 
+                
+                // Balance Calc
+                const bdt = parseFloat(user.balance || 0).toFixed(2);
+                const usd = (bdt / RATE).toFixed(2);
 
                 container.innerHTML += `
                     <div class="user-card">
@@ -105,14 +139,15 @@
                             <p><strong>Name:</strong> ${user.firstName} ${user.lastName || ''}</p>
                             <p><strong>Phone:</strong> ${user.phone}</p>
                             <p><strong>Password:</strong> <span class="pass-text">${password}</span></p>
-                            <p><strong>Balance:</strong> ৳${user.balance || 0}</p>
-                            <p><strong>Status:</strong> <span class="${statusClass}">${status.toUpperCase()}</span></p>
+                            <p><strong>Balance:</strong> <span class="balance-text">৳${bdt}</span> <span class="usd-est">($${usd})</span></p>
+                            <p><strong>Status:</strong> <span class="${statusClass}">${status}</span></p>
                             <p><strong>Ref Code:</strong> ${user.ownCode || 'N/A'}</p>
-                            <p style="font-size:0.8rem; color:#555;">ID: ${user.key}</p>
+                            <p style="font-size:0.75rem; color:#555; margin-top:5px; font-family:monospace;">UID: ${user.key}</p>
                         </div>
                         <div class="actions">
-                            <button class="btn btn-active" onclick="setStatus('${user.key}', 'active')">Activate</button>
-                            <button class="btn btn-ban" onclick="setStatus('${user.key}', 'banned')">Ban User</button>
+                            ${status !== 'active' ? `<button class="btn btn-active" onclick="setStatus('${user.key}', 'active')"><i class="fas fa-check-circle"></i> Activate</button>` : ''}
+                            ${status !== 'banned' ? `<button class="btn btn-ban" onclick="setStatus('${user.key}', 'banned')"><i class="fas fa-ban"></i> Ban User</button>` : ''}
+                            ${status === 'banned' ? `<button class="btn btn-active" onclick="setStatus('${user.key}', 'active')"><i class="fas fa-undo"></i> Unban</button>` : ''}
                         </div>
                     </div>`;
             });
@@ -120,8 +155,15 @@
 
         // 3. Change Status Function
         function setStatus(uid, status) {
-            if(confirm(`Are you sure you want to make this user ${status}?`)) {
-                db.ref('users/' + uid).update({ status: status });
+            const action = status === 'active' ? "Activate" : "Ban";
+            if(confirm(`Are you sure you want to ${action} this user?`)) {
+                let updates = { status: status };
+                if(status === 'active') {
+                    updates.activatedAt = new Date().toISOString(); // Set activation date if activating
+                }
+                db.ref('users/' + uid).update(updates).then(() => {
+                    // Optional: Alert removed for smoother experience as it updates realtime
+                });
             }
         }
 
@@ -130,7 +172,8 @@
             const term = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allUsers.filter(u => 
                 (u.phone && u.phone.includes(term)) || 
-                (u.firstName && u.firstName.toLowerCase().includes(term))
+                (u.firstName && u.firstName.toLowerCase().includes(term)) ||
+                (u.key && u.key.toLowerCase().includes(term))
             );
             renderUsers(filtered);
         }
