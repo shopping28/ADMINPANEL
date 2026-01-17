@@ -42,7 +42,7 @@
         
         .pass-text { color: var(--gold); font-family: monospace; background: rgba(241, 196, 15, 0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(241, 196, 15, 0.2); }
         .balance-text { color: #fff; font-weight: bold; }
-        .usd-est { font-size: 0.8rem; color: #888; }
+        .bdt-est { font-size: 0.8rem; color: #888; }
 
         /* Buttons */
         .actions { display: flex; flex-direction: column; gap: 10px; min-width: 140px; }
@@ -139,7 +139,8 @@
                             <p><strong>Name:</strong> ${user.firstName} ${user.lastName || ''}</p>
                             <p><strong>Phone:</strong> ${user.phone}</p>
                             <p><strong>Password:</strong> <span class="pass-text">${password}</span></p>
-                            <p><strong>Balance:</strong> <span class="balance-text">৳${bdt}</span> <span class="usd-est">($${usd})</span></p>
+                            <!-- Changed to Show USD first -->
+                            <p><strong>Balance:</strong> <span class="balance-text">$${usd}</span> <span class="bdt-est">(৳${bdt})</span></p>
                             <p><strong>Status:</strong> <span class="${statusClass}">${status}</span></p>
                             <p><strong>Ref Code:</strong> ${user.ownCode || 'N/A'}</p>
                             <p style="font-size:0.75rem; color:#555; margin-top:5px; font-family:monospace;">UID: ${user.key}</p>
