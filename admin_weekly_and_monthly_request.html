@@ -3,67 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin | Challenge Requests</title>
+    <title>Admin | Weekly & Monthly Manager</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg-dark: #050505; --card-bg: #0f172a; --text-main: #ffffff; --text-muted: #94a3b8; --neon-green: #10b981; --neon-red: #ef4444; --neon-blue: #3b82f6; --neon-purple: #a855f7; }
-        body { margin: 0; padding: 20px; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; }
+        :root { --bg: #0f0c29; --card: #1b1b2f; --border: #333; --gold: #f1c40f; --green: #00f260; --blue: #3498db; --purple: #9b59b6; --red: #ff4757; }
+        body { margin: 0; padding: 20px; background: var(--bg); color: white; font-family: 'Outfit', sans-serif; }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
+        .back-btn { background: #222; color: #ccc; text-decoration: none; padding: 8px 15px; border-radius: 8px; font-size: 0.9rem; }
         
-        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
-        .logo { font-size: 1.5rem; font-weight: 900; color: var(--text-main); }
-        .logo span { color: var(--neon-blue); }
+        /* TABS */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: #222; color: #aaa; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tab-btn.active { background: var(--gold); color: black; }
 
-        .container { max-width: 800px; margin: 0 auto; }
-        .section-title { font-size: 1.2rem; color: var(--text-muted); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; }
+        /* SECTIONS */
+        .section { display: none; }
+        .section.active { display: block; }
 
-        .req-card { 
-            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.05); 
-            padding: 20px; border-radius: 16px; margin-bottom: 15px; 
-            display: flex; flex-direction: column; gap: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            animation: fadeIn 0.3s ease-in;
-        }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* FORMS */
+        .form-card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 10px; }
+        label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 10px; background: #0b0b15; border: 1px solid #444; color: white; border-radius: 6px; box-sizing: border-box; }
+        .btn-save { width: 100%; background: var(--green); color: black; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 
-        .req-header { display: flex; justify-content: space-between; align-items: center; }
-        .req-type { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .type-weekly { background: rgba(59, 130, 246, 0.2); color: var(--neon-blue); border: 1px solid var(--neon-blue); }
-        .type-monthly { background: rgba(168, 85, 247, 0.2); color: var(--neon-purple); border: 1px solid var(--neon-purple); }
+        /* LISTS */
+        .level-list { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .lvl-item { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; position: relative; border: 1px solid var(--border); }
+        .lvl-tag { position: absolute; top: 10px; right: 10px; font-size: 0.7rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .tag-w { background: rgba(52, 152, 219, 0.2); color: var(--blue); }
+        .tag-m { background: rgba(155, 89, 182, 0.2); color: var(--purple); }
+        .btn-del { background: var(--red); color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-top: 10px; }
 
-        .user-info { font-size: 1.1rem; font-weight: 700; }
-        .req-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; }
-        .det-item b { color: #fff; margin-left: 5px; }
+        /* REQUESTS */
+        .req-card { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid var(--gold); }
+        .req-info { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; }
+        .btn-grp { display: flex; gap: 10px; }
+        .btn-act { flex: 1; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .b-app { background: var(--green); color: black; }
+        .b-rej { background: var(--red); color: white; }
 
-        .action-area { display: flex; gap: 10px; margin-top: 10px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.9rem; }
-        .btn-approve { background: var(--neon-green); color: #000; }
-        .btn-approve:hover { background: #059669; }
-        .btn-reject { background: rgba(239, 68, 68, 0.1); color: var(--neon-red); border: 1px solid var(--neon-red); }
-        .btn-reject:hover { background: var(--neon-red); color: #fff; }
-
-        .empty-msg { text-align: center; color: var(--text-muted); padding: 40px; font-style: italic; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <div class="header">
-            <div class="logo">ADMIN <span>PANEL</span></div>
-            <div style="font-size:0.9rem; color:#aaa;">Task Requests</div>
+            <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <h2>Weekly & Monthly Manager</h2>
         </div>
 
-        <div class="section-title">Pending Approvals</div>
-        <div id="requestList">
-            <div class="empty-msg"><i class="fas fa-spinner fa-spin"></i> Loading requests...</div>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('setup')"><i class="fas fa-cogs"></i> Set Targets</button>
+            <button class="tab-btn" onclick="showTab('requests')"><i class="fas fa-list"></i> User Requests</button>
+        </div>
+
+        <!-- 1. SETUP SECTION (ADD LEVELS) -->
+        <div id="setup" class="section active">
+            <div class="form-card">
+                <h3 style="margin-top:0; color:var(--gold);">➕ Add New Level</h3>
+                <div class="form-grid">
+                    <div>
+                        <label>Type</label>
+                        <select id="t_type">
+                            <option value="weekly">Weekly Challenge</option>
+                            <option value="monthly">Monthly Challenge</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Level Number</label>
+                        <input type="number" id="t_lvl" placeholder="Ex: 1">
+                    </div>
+                    <div>
+                        <label>Target Referrals</label>
+                        <input type="number" id="t_target" placeholder="Ex: 10">
+                    </div>
+                    <div>
+                        <label>Reward ($ USD)</label>
+                        <input type="number" id="t_reward" placeholder="Ex: 5">
+                    </div>
+                    <div>
+                        <label>Entry Cost (Credits)</label>
+                        <input type="number" id="t_cost" placeholder="Ex: 2">
+                    </div>
+                </div>
+                <button class="btn-save" onclick="addLevel()">Save Level</button>
+            </div>
+
+            <h3 style="border-bottom:1px solid #333; padding-bottom:10px;">Active Configuration</h3>
+            <div id="activeLevels" class="level-list">Loading...</div>
+        </div>
+
+        <!-- 2. REQUESTS SECTION (APPROVE/REJECT) -->
+        <div id="requests" class="section">
+            <h3 style="color:#aaa;">Pending Approvals</h3>
+            <div id="reqList">Loading requests...</div>
         </div>
     </div>
 
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <script>
-        // UPDATED FIREBASE CONFIGURATION
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyBEEkp40hJF81XaLVa9DNPWX-aDy_0oEUE",
             authDomain: "shopping28-84906.firebaseapp.com",
@@ -73,113 +119,163 @@
             messagingSenderId: "252107906792",
             appId: "1:252107906792:web:d39b0be25c88e07015b35d"
         };
-        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Listen for Pending Requests
-        db.ref('target_requests').on('value', snap => {
-            const list = document.getElementById('requestList');
-            list.innerHTML = "";
-            let hasData = false;
-
-            if(snap.exists()) {
-                snap.forEach(child => {
-                    const key = child.key;
-                    const data = child.val();
-
-                    if(data.status === 'pending') {
-                        hasData = true;
-                        renderCard(key, data, list);
-                    }
-                });
-            }
-
-            if(!hasData) list.innerHTML = `<div class="empty-msg">No pending requests found.</div>`;
-        });
-
-        function renderCard(key, data, container) {
-            const date = new Date(data.timestamp).toLocaleString();
-            const typeClass = data.type === 'weekly' ? 'type-weekly' : 'type-monthly';
-            
-            const html = `
-                <div class="req-card">
-                    <div class="req-header">
-                        <span class="req-type ${typeClass}">${data.type.toUpperCase()} CHALLENGE</span>
-                        <span style="font-size:0.8rem; opacity:0.6;">${date}</span>
-                    </div>
-                    <div class="user-info">User UID: <span style="font-family:monospace; color:var(--neon-blue)">${data.uid}</span></div>
-                    
-                    <div class="req-details">
-                        <div class="det-item">Level: <b>${data.level}</b></div>
-                        <div class="det-item">Target: <b>${data.targetCount} Refs</b></div>
-                        <div class="det-item">Reward: <b>$${data.reward}</b></div>
-                        <div class="det-item">Cost Paid: <b>${data.cost} Credits</b></div>
-                    </div>
-
-                    <div class="action-area">
-                        <button class="btn btn-reject" onclick="rejectRequest('${key}', '${data.uid}', ${data.cost})">Reject & Refund</button>
-                        <button class="btn btn-approve" onclick="approveRequest('${key}', '${data.uid}', '${data.type}', ${data.level}, ${data.targetCount}, ${data.reward})">Approve & Start</button>
-                    </div>
-                </div>
-            `;
-            container.innerHTML += html;
+        // TABS LOGIC
+        function showTab(id) {
+            document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
         }
 
-        function approveRequest(key, uid, type, level, target, reward) {
-            if(!confirm("Approve this request? User's challenge will start immediately.")) return;
+        // ==========================
+        // 1. SETUP LOGIC (ADD/DEL LEVELS)
+        // ==========================
+        
+        function addLevel() {
+            const type = document.getElementById('t_type').value;
+            const lvl = document.getElementById('t_lvl').value;
+            const target = document.getElementById('t_target').value;
+            const reward = document.getElementById('t_reward').value;
+            const cost = document.getElementById('t_cost').value;
 
-            // 1. Get User's Current Active Team Count (This becomes the "Start Point")
+            if(!lvl || !target || !reward || !cost) return alert("Fill all fields!");
+
+            const path = `settings/targets/${type}/${lvl}`;
+            db.ref(path).set({
+                level: Number(lvl),
+                target: Number(target),
+                reward: Number(reward),
+                cost: Number(cost),
+                type: type
+            }).then(() => {
+                alert("Level Saved Successfully!");
+                document.getElementById('t_lvl').value = "";
+            });
+        }
+
+        // Load Levels
+        function loadLevels() {
+            const container = document.getElementById('activeLevels');
+            
+            db.ref('settings/targets').on('value', snap => {
+                container.innerHTML = "";
+                if(!snap.exists()) { container.innerHTML = "No levels configured."; return; }
+                
+                const data = snap.val();
+                // Process Weekly
+                if(data.weekly) {
+                    Object.values(data.weekly).forEach(l => renderLevelCard(l, container));
+                }
+                // Process Monthly
+                if(data.monthly) {
+                    Object.values(data.monthly).forEach(l => renderLevelCard(l, container));
+                }
+            });
+        }
+
+        function renderLevelCard(l, parent) {
+            const tagClass = l.type === 'weekly' ? 'tag-w' : 'tag-m';
+            const html = `
+                <div class="lvl-item">
+                    <span class="lvl-tag ${tagClass}">${l.type.toUpperCase()}</span>
+                    <h3 style="margin:0 0 5px 0;">Level ${l.level}</h3>
+                    <div style="font-size:0.9rem; color:#ccc;">
+                        🎯 Target: <b style="color:white">${l.target}</b> Refs<br>
+                        💰 Reward: <b style="color:#00f260">$${l.reward}</b><br>
+                        🎫 Cost: <b>${l.cost}</b> Credits
+                    </div>
+                    <button class="btn-del" onclick="deleteLevel('${l.type}', '${l.level}')">Delete Level</button>
+                </div>
+            `;
+            parent.innerHTML += html;
+        }
+
+        function deleteLevel(type, lvl) {
+            if(confirm(`Delete ${type} Level ${lvl}?`)) {
+                db.ref(`settings/targets/${type}/${lvl}`).remove();
+            }
+        }
+
+        // ==========================
+        // 2. REQUESTS LOGIC (APPROVE/REJECT)
+        // ==========================
+        
+        db.ref('target_requests').orderByChild('status').equalTo('pending').on('value', snap => {
+            const list = document.getElementById('reqList');
+            list.innerHTML = "";
+            if(!snap.exists()) { list.innerHTML = "<div style='text-align:center; padding:20px;'>No pending requests.</div>"; return; }
+
+            snap.forEach(child => {
+                const k = child.key;
+                const d = child.val();
+                
+                const html = `
+                    <div class="req-card">
+                        <div class="req-info">
+                            <span style="color:var(--gold)">${d.type.toUpperCase()} - Level ${d.level}</span>
+                            <span style="font-size:0.8rem">${new Date(d.timestamp).toLocaleDateString()}</span>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                            UID: <span style="font-family:monospace">${d.uid}</span><br>
+                            Target: ${d.targetCount} | Reward: $${d.reward} | Cost: ${d.cost}
+                        </div>
+                        <div class="btn-grp">
+                            <button class="btn-act b-app" onclick="approveRequest('${k}', '${d.uid}', '${d.type}', ${d.level}, ${d.targetCount}, ${d.reward})">Approve</button>
+                            <button class="btn-act b-rej" onclick="rejectRequest('${k}', '${d.uid}', ${d.cost})">Reject</button>
+                        </div>
+                    </div>
+                `;
+                list.innerHTML += html;
+            });
+        });
+
+        function approveRequest(key, uid, type, level, target, reward) {
+            if(!confirm("Approve and Start Challenge?")) return;
+
+            // Get Current Team Count to use as baseline
             db.ref('users/'+uid+'/ownCode').once('value', snap => {
                 const code = snap.val();
-                if(!code) return alert("User code not found!");
-
                 db.ref('users').orderByChild('referredBy').equalTo(code).once('value', teamSnap => {
                     let activeCount = 0;
                     teamSnap.forEach(u => { if(u.val().status === 'active') activeCount++; });
 
-                    // 2. Calculate End Time
                     const durationDays = (type === 'weekly') ? 7 : 30;
                     const endTime = Date.now() + (durationDays * 24 * 60 * 60 * 1000);
 
-                    // 3. Update Database
                     const updates = {};
-                    // Mark request as approved
                     updates['target_requests/'+key+'/status'] = 'approved';
-                    // Set User's Active Target
                     updates['users/'+uid+'/active_target'] = {
-                        type: type,
-                        level: level,
-                        targetCount: target,
-                        reward: reward,
-                        startCount: activeCount, // Critical: Only new refs count
-                        startTime: Date.now(),
-                        endTime: endTime
+                        type, level, targetCount: target, reward,
+                        startCount: activeCount, startTime: Date.now(), endTime
                     };
 
-                    db.ref().update(updates).then(() => alert("Request Approved & Challenge Started!"));
+                    db.ref().update(updates).then(() => alert("Approved!"));
                 });
             });
         }
 
         function rejectRequest(key, uid, cost) {
-            const reason = prompt("Enter rejection reason (User will see this):", "Requirements not met");
+            const reason = prompt("Rejection Reason:");
             if(!reason) return;
 
-            const updates = {};
-            // Mark request rejected
-            updates['target_requests/'+key+'/status'] = 'rejected';
-            // Refund Credits
-            // Note: We need transaction for safety, but direct update is simpler for admin panel MVP
             db.ref('users/'+uid+'/credits').once('value', s => {
-                let current = s.val() || 0;
-                updates['users/'+uid+'/credits'] = current + cost;
+                const cur = s.val() || 0;
+                const updates = {};
+                updates['target_requests/'+key+'/status'] = 'rejected';
+                updates['users/'+uid+'/credits'] = cur + cost; // Refund
                 updates['users/'+uid+'/last_rejection'] = reason;
-                updates['users/'+uid+'/rejection_seen'] = false; // Trigger popup on user side
+                updates['users/'+uid+'/rejection_seen'] = false;
 
-                db.ref().update(updates).then(() => alert("Request Rejected & Credits Refunded."));
+                db.ref().update(updates).then(() => alert("Rejected & Refunded."));
             });
         }
+
+        // INIT
+        loadLevels();
+
     </script>
 </body>
 </html>
