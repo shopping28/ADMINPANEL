@@ -66,7 +66,7 @@
         .user-box { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--card-border); }
         .u-avatar { width: 45px; height: 45px; background: linear-gradient(135deg, #333, #555); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: #fff; }
         .u-info h4 { margin: 0; font-size: 1rem; color: #fff; }
-        .u-info p { margin: 3px 0 0; font-size: 0.75rem; color: var(--text-gray); font-family: monospace; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+        .u-info p { margin: 3px 0 0; font-size: 0.8rem; color: var(--gold); font-family: monospace; font-weight: bold; letter-spacing: 0.5px; }
 
         /* TASK DETAILS */
         .task-info { padding: 20px; flex: 1; }
@@ -208,7 +208,7 @@
             </div>`;
         }
 
-        // --- 2. APPLY REQUESTS (With User Details) ---
+        // --- 2. APPLY REQUESTS (With User Name & Phone) ---
         db.ref('target_requests').orderByChild('status').equalTo('pending').on('value', snap => {
             const list = document.getElementById('applyList'); list.innerHTML = "";
             let count = 0;
@@ -219,11 +219,12 @@
                     const d = child.val();
                     count++;
                     
-                    // Fetch User Details Inside Loop
+                    // Fetch User Details to get Name & Phone
                     db.ref('users/' + d.uid).once('value', uSnap => {
                         const u = uSnap.val() || {};
-                        const uName = u.name || "Unknown User";
-                        const uReg = d.uid; // Using UID as Reg ID
+                        const uName = u.name || u.username || "Unknown User";
+                        // Try to find Phone, then Email, else UID
+                        const uReg = u.phone || u.phoneNumber || u.email || d.uid;
 
                         list.innerHTML += `
                         <div class="card-item">
@@ -235,7 +236,7 @@
                                 <div class="u-avatar">${getAvatar(uName)}</div>
                                 <div class="u-info">
                                     <h4>${uName}</h4>
-                                    <p>Reg ID: ${uReg.substring(0,12)}...</p>
+                                    <p>${uReg}</p>
                                 </div>
                             </div>
                             <div class="task-info">
@@ -256,19 +257,29 @@
             initApply = false;
         });
 
-        // APPROVE FUNCTION
+        // APPROVE FUNCTION (Calculates Time Correctly)
         function approveApply(key, uid, type, level, target, reward) {
             if(!confirm("Start Challenge for User?")) return;
             db.ref(`settings/targets/${type}/${level}`).once('value', s => {
                 const settings = s.val();
                 const days = (settings && settings.duration) ? settings.duration : 30;
+                
                 db.ref('users/'+uid+'/ownCode').once('value', c => {
                     db.ref('users').orderByChild('referredBy').equalTo(c.val()).once('value', team => {
-                        let activeCount = 0; team.forEach(u => { if(u.val().status === 'active') activeCount++; });
+                        let activeCount = 0; 
+                        team.forEach(u => { if(u.val().status === 'active') activeCount++; });
+                        
                         const endTime = Date.now() + (days * 24 * 60 * 60 * 1000);
                         const updates = {};
                         updates['target_requests/'+key+'/status'] = 'approved';
-                        updates['users/'+uid+'/active_target'] = { type, level, targetCount: target, reward, startCount: activeCount, startTime: Date.now(), endTime, durationDays: days };
+                        // Save startTime and endTime to database
+                        updates['users/'+uid+'/active_target'] = { 
+                            type, level, targetCount: target, reward, 
+                            startCount: activeCount, 
+                            startTime: Date.now(), 
+                            endTime: endTime, 
+                            durationDays: days 
+                        };
                         db.ref().update(updates).then(() => alert("Approved & Started!"));
                     });
                 });
@@ -301,8 +312,8 @@
 
                     db.ref('users/' + d.uid).once('value', uSnap => {
                         const u = uSnap.val() || {};
-                        const uName = u.name || "Unknown User";
-                        const uReg = d.uid;
+                        const uName = u.name || u.username || "Unknown User";
+                        const uReg = u.phone || u.phoneNumber || u.email || d.uid;
 
                         list.innerHTML += `
                         <div class="card-item reward-card" style="border-left: 4px solid var(--blue)">
@@ -314,7 +325,7 @@
                                 <div class="u-avatar" style="background:#3498db">${getAvatar(uName)}</div>
                                 <div class="u-info">
                                     <h4>${uName}</h4>
-                                    <p>Reg ID: ${uReg.substring(0,12)}...</p>
+                                    <p>${uReg}</p>
                                 </div>
                             </div>
                             <div class="task-info">
@@ -351,7 +362,7 @@
             const users = snap.val();
             if(!users) return;
 
-            // Calculate Referrals Map
+            // Calculate Referrals Map (For Progress)
             let refCounts = {};
             Object.values(users).forEach(u => {
                 if(u.referredBy && u.status === 'active') {
@@ -368,7 +379,6 @@
                     hasActive = true;
                     const t = u.active_target;
                     
-                    // Time Left Logic
                     const now = Date.now();
                     const diff = (t.endTime || 0) - now;
                     let timeStr = "Expired";
@@ -381,11 +391,14 @@
                         timeColor = "#f1c40f";
                     }
 
-                    // Progress Logic
                     const currentTotal = refCounts[u.ownCode] || 0;
                     let prog = currentTotal - (t.startCount || 0);
                     if(prog < 0) prog = 0;
                     const pct = Math.min((prog / t.targetCount) * 100, 100);
+
+                    // User Info
+                    const uName = u.name || "Unknown";
+                    const uReg = u.phone || u.email || key;
 
                     list.innerHTML += `
                     <div class="card-item" style="border-left: 4px solid var(--primary)">
@@ -394,10 +407,10 @@
                             <span class="badge-date">${t.type.toUpperCase()} LVL ${t.level}</span>
                         </div>
                         <div class="user-box">
-                            <div class="u-avatar" style="background:var(--primary)">${getAvatar(u.name)}</div>
+                            <div class="u-avatar" style="background:var(--primary)">${getAvatar(uName)}</div>
                             <div class="u-info">
-                                <h4>${u.name || 'Unknown'}</h4>
-                                <p>UID: ${key.substring(0,8)}..</p>
+                                <h4>${uName}</h4>
+                                <p style="color:#ccc;">${uReg}</p>
                             </div>
                         </div>
                         <div class="task-info">
