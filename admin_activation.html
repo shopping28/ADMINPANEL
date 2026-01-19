@@ -234,20 +234,6 @@
                     if(btnApp) { btnApp.disabled = false; }
                 });
         }
-        // Example logic inside account_active.html activation function
-db.ref('settings/credits/signup_bonus').once('value', snapshot => {
-    const bonus = snapshot.val() || 0;
-    
-    // User status update korar somoy credits o add hobe
-    db.ref('users/' + currentUser.uid).update({
-        status: 'active',
-        credits: bonus, // Add the bonus credits here
-        activatedAt: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        alert("Account Activated! You received " + bonus + " free credits.");
-        window.location.href = 'home.html';
-    });
-});
     </script>
 </body>
 </html>
