@@ -43,14 +43,18 @@
         .btn-reject:hover:not(:disabled) { background: #e84118; }
 
         .empty-msg { text-align: center; color: #777; margin-top: 50px; font-style: italic; }
+        
+        /* Sound Toggle Helper */
+        .sound-status { font-size: 0.8rem; color: #aaa; margin-left: auto; }
     </style>
 </head>
-<body>
+<body onclick="enableAudio()"> <!-- Click anywhere to ensure audio works -->
 
     <div class="container">
         <div class="header">
             <a href="admin_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
             <h2>Pending Requests</h2>
+            <div class="sound-status"><i class="fas fa-volume-up"></i> Voice Active</div>
         </div>
 
         <div id="list">
@@ -77,17 +81,40 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Realtime Listener for Requests
+        // Variable to track initial load
+        let isInitialLoad = true;
+        let previousCount = 0;
+
+        // --- VOICE FUNCTION ---
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                const msg = new SpeechSynthesisUtterance(text);
+                msg.rate = 1; // Speed
+                msg.pitch = 1; // Tone
+                window.speechSynthesis.speak(msg);
+            }
+        }
+
+        // Browser policy requires user interaction first
+        function enableAudio() {
+            // Just a dummy check to satisfy browser
+            if(window.speechSynthesis.speaking) return;
+        }
+
+        // --- REALTIME LISTENER ---
         db.ref('activation_requests').orderByChild('status').equalTo('pending').on('value', (snapshot) => {
             const list = document.getElementById('list'); 
             list.innerHTML = "";
+            let currentCount = 0;
             
             if(!snapshot.exists()) { 
                 list.innerHTML = "<div class='empty-msg'>No pending requests found.</div>"; 
+                previousCount = 0;
                 return; 
             }
             
             snapshot.forEach((child) => {
+                currentCount++;
                 const d = child.val();
                 const key = child.key;
                 
@@ -126,6 +153,16 @@
                 // Fetch Phone Number Asynchronously
                 fetchUserPhone(d.uid);
             });
+
+            // --- VOICE TRIGGER LOGIC ---
+            // If it's NOT the first load, AND current requests are more than before
+            if (!isInitialLoad && currentCount > previousCount) {
+                speak("New Activation Request Received");
+            }
+
+            // Update trackers
+            previousCount = currentCount;
+            isInitialLoad = false;
         });
 
         // Function to get Phone Number from Users node
@@ -137,14 +174,13 @@
             });
         }
 
-        // === APPROVE LOGIC (With MLM & Signup Bonus) ===
+        // === APPROVE LOGIC (NORMAL) ===
         async function approve(key, uid) {
             if(!confirm("Confirm Approve?")) return;
 
             const btnApp = document.getElementById('btn-app-' + key);
             const btnRej = document.getElementById('btn-rej-' + key);
             
-            // Set Working State
             if(btnApp) { btnApp.innerText = "Working..."; btnApp.disabled = true; }
             if(btnRej) { btnRej.disabled = true; }
 
@@ -153,37 +189,28 @@
                 const settingsSnap = await db.ref('settings/referral_levels').once('value');
                 const levelsConfig = settingsSnap.val() || [];
 
-                // 2. Get Signup Bonus Settings
-                const bonusSnap = await db.ref('settings/credits/signup_bonus').once('value');
-                const signupBonus = parseFloat(bonusSnap.val() || 0);
-
-                // 3. Get User Info
+                // 2. Get User Info
                 const userSnap = await db.ref('users/' + uid).once('value');
                 const user = userSnap.val();
                 
                 if (!user) throw new Error("User not found!");
                 if (user.status === 'active') throw new Error("User already active!");
 
-                // 4. Distribute Commission
+                // 3. Distribute Commission (MLM)
                 if(user.referredBy && user.referredBy !== "the_art2000") {
                     await distributeCommission(user.referredBy, 1, levelsConfig, user.ownCode);
                 }
 
-                // 5. Activate User & Add Bonus Credits
-                // Check if user has existing credits, then add bonus
-                const currentCredits = parseFloat(user.credits || 0);
-                const newTotalCredits = currentCredits + signupBonus;
-
+                // 4. Activate User (NORMAL)
                 await db.ref('users/' + uid).update({ 
                     status: 'active', 
-                    credits: newTotalCredits,
                     activatedAt: firebase.database.ServerValue.TIMESTAMP 
                 });
                 
-                // 6. Update Request Status
+                // 5. Update Request Status
                 await db.ref('activation_requests/' + key).update({ status: 'approved' });
 
-                alert("Approved Successfully! User received " + signupBonus + " bonus credits.");
+                alert("Approved Successfully!");
 
             } catch (error) {
                 alert("Error: " + error.message);
@@ -229,14 +256,11 @@
             const btnApp = document.getElementById('btn-app-' + key);
             const btnRej = document.getElementById('btn-rej-' + key);
 
-            // Set Working State
             if(btnRej) { btnRej.innerText = "Working..."; btnRej.disabled = true; }
             if(btnApp) { btnApp.disabled = true; }
 
             db.ref('activation_requests/' + key).update({ status: 'rejected' })
-                .then(() => {
-                    // Item will automatically disappear due to realtime listener
-                })
+                .then(() => { })
                 .catch(err => {
                     alert("Error: " + err.message);
                     if(btnRej) { btnRej.innerText = "REJECT"; btnRej.disabled = false; }
