@@ -137,7 +137,7 @@
             });
         }
 
-        // === APPROVE LOGIC (With MLM) ===
+        // === APPROVE LOGIC (With MLM & Signup Bonus) ===
         async function approve(key, uid) {
             if(!confirm("Confirm Approve?")) return;
 
@@ -153,28 +153,37 @@
                 const settingsSnap = await db.ref('settings/referral_levels').once('value');
                 const levelsConfig = settingsSnap.val() || [];
 
-                // 2. Get User Info
+                // 2. Get Signup Bonus Settings
+                const bonusSnap = await db.ref('settings/credits/signup_bonus').once('value');
+                const signupBonus = parseFloat(bonusSnap.val() || 0);
+
+                // 3. Get User Info
                 const userSnap = await db.ref('users/' + uid).once('value');
                 const user = userSnap.val();
                 
                 if (!user) throw new Error("User not found!");
                 if (user.status === 'active') throw new Error("User already active!");
 
-                // 3. Distribute Commission
+                // 4. Distribute Commission
                 if(user.referredBy && user.referredBy !== "the_art2000") {
                     await distributeCommission(user.referredBy, 1, levelsConfig, user.ownCode);
                 }
 
-                // 4. Activate User
+                // 5. Activate User & Add Bonus Credits
+                // Check if user has existing credits, then add bonus
+                const currentCredits = parseFloat(user.credits || 0);
+                const newTotalCredits = currentCredits + signupBonus;
+
                 await db.ref('users/' + uid).update({ 
                     status: 'active', 
+                    credits: newTotalCredits,
                     activatedAt: firebase.database.ServerValue.TIMESTAMP 
                 });
                 
-                // 5. Update Request Status
+                // 6. Update Request Status
                 await db.ref('activation_requests/' + key).update({ status: 'approved' });
 
-                alert("Approved Successfully!");
+                alert("Approved Successfully! User received " + signupBonus + " bonus credits.");
 
             } catch (error) {
                 alert("Error: " + error.message);
